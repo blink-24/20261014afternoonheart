@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>고2 생명과학Ⅰ 심박동 자율신경계 시뮬레이터</title>
+  <title>고2 생명과학Ⅰ 심박동 시뮬레이터 & 탐구 보고서 제출 시스템</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Google Fonts: Pretendard / Noto Sans KR alternative via CDN -->
+  <!-- Google Fonts: Noto Sans KR -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 
   <script>
@@ -56,7 +56,7 @@
       overflow-x: hidden;
     }
 
-    /* 실제 심장 수축(Systole)과 이완(Diastole) 리듬을 모사한 키프레임 */
+    /* 심장 수축(Systole)과 이완(Diastole) 리듬 키프레임 */
     @keyframes lub-dub {
       0%   { transform: scale(1); }
       12%  { transform: scale(1.18) rotate(-1deg); }
@@ -87,7 +87,7 @@
       transform-origin: 72px 66px;
     }
 
-    /* 커스텀 슬라이더 스타일 (녹색 & 빨간색 포인트) */
+    /* 커스텀 슬라이더 스타일 */
     input[type=range] {
       -webkit-appearance: none;
       appearance: none;
@@ -114,6 +114,13 @@
     input[type=range]::-webkit-slider-thumb:hover {
       transform: scale(1.15);
     }
+
+    /* 커스텀 체크박스 강조 */
+    .grade-checkbox:checked + span {
+      background-color: #1E4D3B;
+      color: #FAF7F0;
+      border-color: #1E4D3B;
+    }
   </style>
 </head>
 
@@ -121,21 +128,39 @@
 
   <!-- 상단 토스트 알림창 (alert 대체) -->
   <div id="toast-box" class="fixed top-4 right-4 z-50 hidden transform transition-all duration-300">
-    <div class="bg-forest-700 text-beige-50 px-5 py-3 rounded-xl shadow-xl border-2 border-beige-200 flex items-center gap-3">
+    <div class="bg-forest-700 text-beige-50 px-5 py-3.5 rounded-xl shadow-2xl border-2 border-beige-200 flex items-center gap-3">
       <span class="w-3 h-3 rounded-full bg-crimson-500 animate-ping"></span>
       <span id="toast-msg" class="text-sm font-bold">알림 메시지</span>
     </div>
   </div>
 
-  <!-- 전체 컨테이너 (구글 사이트 임베드 가로폭 최적화) -->
+  <!-- 전체 컨테이너 -->
   <div class="max-w-6xl mx-auto space-y-5">
 
-    <!-- 헤더 카드 (녹색 + 베이지 + 빨간 포인트) -->
+    <!-- 최상단 페이지 전환 바 (1번 페이지 vs 2번 페이지) -->
+    <div class="bg-forest-800 text-beige-50 p-2.5 rounded-2xl shadow-lg border-2 border-forest-600 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2 px-2">
+        <span class="w-3 h-3 rounded-full bg-crimson-500"></span>
+        <span class="text-xs sm:text-sm font-black tracking-tight text-beige-100">고2 생명과학Ⅰ 디지털 탐구 교실</span>
+      </div>
+
+      <!-- 메인 1번 / 2번 페이지 전환 버튼 그룹 -->
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <button onclick="switchPage(1)" id="main-page-btn-1" class="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-crimson-500 text-white shadow-md ring-2 ring-crimson-100/40">
+          <span>1️⃣ 1번 페이지: 심박동 시뮬레이션 웹 앱</span>
+        </button>
+        <button onclick="switchPage(2)" id="main-page-btn-2" class="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-forest-700 text-beige-200 hover:bg-forest-600">
+          <span>2️⃣ 2번 페이지: 학생 보고서 활동 & 제출</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 공통 헤더 카드 -->
     <header class="bg-forest-600 text-beige-50 rounded-2xl p-5 sm:p-6 shadow-md border-b-4 border-crimson-500 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
       <div class="space-y-1.5">
         <div class="flex flex-wrap items-center gap-2">
-          <span class="px-3 py-1 bg-crimson-500 text-white text-xs font-extrabold rounded-full tracking-wide shadow-sm">
-            고2 생명과학Ⅰ 자기주도 탐구실
+          <span id="header-page-badge" class="px-3 py-1 bg-crimson-500 text-white text-xs font-extrabold rounded-full tracking-wide shadow-sm">
+            PAGE 1 · 심박동 시뮬레이션 실험실
           </span>
           <span class="px-3 py-1 bg-forest-700 text-beige-100 text-xs font-semibold rounded-full border border-forest-500">
             단원: 항상성과 몸의 조절 (자율 신경계)
@@ -145,548 +170,737 @@
           카페인 음료와 심박동(BPM) 변화 시뮬레이터
         </h1>
         <p class="text-xs sm:text-sm text-beige-200">
-          트렌드 카페인 음료 3종과 개인별 대사 체질에 따른 <b>교감·부교감 신경의 길항 작용</b>을 실시간 그래프와 심장 박동으로 탐구해 보세요.
+          1번 페이지에서 음료·체질별 심박동 변화를 실험하고, <b>2번 페이지에서 객관식 평가(5점) 및 탐구보고서를 제출</b>하세요.
         </p>
       </div>
 
-      <!-- 우측 유틸리티 버튼 그룹 (심장 소리 토글 & 구글 사이트 가이드) -->
+      <!-- 우측 유틸리티 버튼 그룹 -->
       <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
         <button onclick="toggleHeartSound()" id="sound-btn" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-beige-100 text-forest-700 hover:bg-beige-200 text-xs font-extrabold transition shadow-sm border border-beige-300">
           <span id="sound-icon">🔇</span>
           <span id="sound-text">심장 박동음 켜기</span>
         </button>
-        <button onclick="openModal('gsites-modal')" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-crimson-500 hover:bg-crimson-600 text-white text-xs font-extrabold transition shadow-sm">
-          <span>🌐</span>
-          <span>구글 사이트(Google Sites) 구현 가이드</span>
+        <button onclick="openModal('sheet-modal')" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-crimson-500 hover:bg-crimson-600 text-white text-xs font-extrabold transition shadow-sm">
+          <span>📊</span>
+          <span>'심박동 보고서 제출' 시트 연동 설정</span>
         </button>
       </div>
     </header>
 
-    <!-- 학습 단계 네비게이션 바 -->
-    <nav class="bg-beige-50 p-2 rounded-2xl border-2 border-beige-200 shadow-sm flex flex-wrap sm:flex-nowrap gap-2">
-      <button onclick="switchMainTab('sim')" id="tab-btn-sim" class="flex-1 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-forest-600 text-beige-50 shadow">
-        <span>🫀</span> 1단계: 심박동 시뮬레이션 실험실
-      </button>
-      <button onclick="switchMainTab('concept')" id="tab-btn-concept" class="flex-1 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-beige-100 text-forest-700 hover:bg-beige-200">
-        <span>🧬</span> 2단계: 자율신경계 원리 & 퀴즈
-      </button>
-      <button onclick="switchMainTab('report')" id="tab-btn-report" class="flex-1 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-beige-100 text-forest-700 hover:bg-beige-200">
-        <span>📝</span> 3단계: 자기주도 탐구 보고서 작성
-      </button>
-    </nav>
+    <!-- =================================================================== -->
+    <!-- [1번 페이지] 기존 웹 앱 (심박동 시뮬레이터 실험실 + 자율신경계 원리) -->
+    <!-- =================================================================== -->
+    <div id="page-1-container" class="space-y-5">
 
-    <!-- ========================================== -->
-    <!-- [TAB 1] 심박동 시뮬레이션 실험실 (기본 화면) -->
-    <!-- ========================================== -->
-    <section id="tab-content-sim" class="space-y-5">
+      <!-- 1번 페이지 내부 서브 탭 (시뮬레이션 실험실 / 자율신경계 원리 & 연습 퀴즈) -->
+      <nav class="bg-beige-50 p-2 rounded-2xl border-2 border-beige-200 shadow-sm flex flex-wrap sm:flex-nowrap gap-2">
+        <button onclick="switchSubTab('sim')" id="tab-btn-sim" class="flex-1 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-forest-600 text-beige-50 shadow">
+          <span>🫀</span> 실험실: 음료·체질별 심박동 시뮬레이터
+        </button>
+        <button onclick="switchSubTab('concept')" id="tab-btn-concept" class="flex-1 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-beige-100 text-forest-700 hover:bg-beige-200">
+          <span>🧬</span> 배경지식: 자율신경계 원리 & 연습 퀴즈
+        </button>
+        <button onclick="switchPage(2)" class="flex-1 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-crimson-50 text-crimson-700 hover:bg-crimson-100 border border-crimson-200">
+          <span>✍️</span> 2번 페이지(학생 보고서 제출) 바로가기 →
+        </button>
+      </nav>
 
-      <!-- 컨트롤 패널: 좌측 음료 3종 선택 / 우측 체질 3종 선택 -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <!-- [1번 페이지 - 탭 A] 심박동 시뮬레이션 실험실 -->
+      <section id="tab-content-sim" class="space-y-5">
 
-        <!-- 1. 핫한 카페인 음료 3종 선택 카드 -->
-        <div class="bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm flex flex-col justify-between">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm sm:text-base font-black text-forest-700 flex items-center gap-2">
-              <span class="w-6 h-6 rounded-full bg-forest-600 text-beige-50 text-xs flex items-center justify-center">1</span>
-              섭취할 카페인 음료 선택 (청소년 권고량: 150mg/일)
-            </h2>
-            <span class="text-[11px] font-bold text-crimson-600 bg-crimson-50 px-2.5 py-0.5 rounded-full border border-crimson-100">클릭하여 변경</span>
-          </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <!-- 1. 핫한 카페인 음료 3종 선택 카드 -->
+          <div class="bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-sm sm:text-base font-black text-forest-700 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-forest-600 text-beige-50 text-xs flex items-center justify-center">1</span>
+                섭취할 카페인 음료 선택 (청소년 권고량: 150mg/일)
+              </h2>
+              <span class="text-[11px] font-bold text-crimson-600 bg-crimson-50 px-2.5 py-0.5 rounded-full border border-crimson-100">클릭하여 변경</span>
+            </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <!-- LOW: 제주 말차 버블 라떼 -->
-            <button onclick="selectDrink('low')" id="drink-card-low" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
-              <div>
-                <div class="flex justify-between items-center">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-black bg-forest-100 text-forest-700">LOW · 낮음</span>
-                  <span class="text-xs font-extrabold text-forest-600">45mg</span>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <!-- LOW: 제주 말차 버블 라떼 -->
+              <button onclick="selectDrink('low')" id="drink-card-low" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
+                <div>
+                  <div class="flex justify-between items-center">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-black bg-forest-100 text-forest-700">LOW · 낮음</span>
+                    <span class="text-xs font-extrabold text-forest-600">45mg</span>
+                  </div>
+                  <div class="font-black text-sm text-forest-800 mt-2">🍵 제주 말차 버블 라떼</div>
+                  <p class="text-[11px] text-beige-800 mt-1 leading-snug">커피가 아니라고 안심하기 쉬운 <b>녹차·찻잎 속 숨은 카페인</b></p>
                 </div>
-                <div class="font-black text-sm text-forest-800 mt-2">🍵 제주 말차 버블 라떼</div>
-                <p class="text-[11px] text-beige-800 mt-1 leading-snug">커피가 아니라고 안심하기 쉬운 <b>녹차·찻잎 속 숨은 카페인</b></p>
-              </div>
-              <div class="mt-3 pt-2 border-t border-beige-200 flex justify-between items-center text-[11px] font-bold">
-                <span class="text-forest-600">일일 권고량의 30%</span>
-              </div>
-            </button>
-
-            <!-- MID: 몬스터 에너지 울트라 (백몬) / 아샷추 -->
-            <button onclick="selectDrink('mid')" id="drink-card-mid" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
-              <div>
-                <div class="flex justify-between items-center">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-black bg-beige-200 text-forest-800">MID · 중간</span>
-                  <span class="text-xs font-extrabold text-crimson-600">110mg</span>
+                <div class="mt-3 pt-2 border-t border-beige-200 flex justify-between items-center text-[11px] font-bold">
+                  <span class="text-forest-600">일일 권고량의 30%</span>
                 </div>
-                <div class="font-black text-sm text-forest-800 mt-2">⚡ 몬스터(백몬) / 아샷추</div>
-                <p class="text-[11px] text-beige-800 mt-1 leading-snug">시험 기간 단골 음료. <b>한 캔만으로 권고량 73%</b>에 육박</p>
-              </div>
-              <div class="mt-3 pt-2 border-t border-beige-200 flex justify-between items-center text-[11px] font-bold">
-                <span class="text-crimson-600">일일 권고량의 73%</span>
-              </div>
-            </button>
+              </button>
 
-            <!-- HIGH: 대용량 아이스 아메리카노 -->
-            <button onclick="selectDrink('high')" id="drink-card-high" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
-              <div>
-                <div class="flex justify-between items-center">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-black bg-crimson-500 text-white">HIGH · 높음</span>
-                  <span class="text-xs font-extrabold text-crimson-600">280mg</span>
+              <!-- MID: 몬스터 에너지 울트라 (백몬) / 아샷추 -->
+              <button onclick="selectDrink('mid')" id="drink-card-mid" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
+                <div>
+                  <div class="flex justify-between items-center">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-black bg-beige-200 text-forest-800">MID · 중간</span>
+                    <span class="text-xs font-extrabold text-crimson-600">110mg</span>
+                  </div>
+                  <div class="font-black text-sm text-forest-800 mt-2">⚡ 몬스터(백몬) / 아샷추</div>
+                  <p class="text-[11px] text-beige-800 mt-1 leading-snug">시험 기간 단골 음료. <b>한 캔만으로 권고량 73%</b>에 육박</p>
                 </div>
-                <div class="font-black text-sm text-forest-800 mt-2">☕ 대용량 아메리카노</div>
-                <p class="text-[11px] text-beige-800 mt-1 leading-snug">메가·벤티 사이즈 4샷 기준. <b>급격한 교감신경 흥분</b> 유발</p>
-              </div>
-              <div class="mt-3 pt-2 border-t border-beige-200 flex justify-between items-center text-[11px] font-bold">
-                <span class="text-crimson-600 font-black">권고량의 187% 초과!</span>
-              </div>
-            </button>
-          </div>
-        </div>
+                <div class="mt-3 pt-2 border-t border-beige-200 flex justify-between items-center text-[11px] font-bold">
+                  <span class="text-crimson-600">일일 권고량의 73%</span>
+                </div>
+              </button>
 
-        <!-- 2. 카페인 민감도 체질 3종 선택 카드 -->
-        <div class="bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm flex flex-col justify-between">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm sm:text-base font-black text-forest-700 flex items-center gap-2">
-              <span class="w-6 h-6 rounded-full bg-crimson-500 text-white text-xs flex items-center justify-center">2</span>
-              섭취자의 카페인 체질 선택 (CYP1A2 효소 및 수용체 민감도)
-            </h2>
-            <span class="text-[11px] font-bold text-forest-600 bg-forest-50 px-2.5 py-0.5 rounded-full border border-forest-100">체질 비교 가능</span>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <!-- 둔감형 (영향 적은 사람) -->
-            <button onclick="selectPersona('low_effect')" id="persona-card-low_effect" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
-              <div>
-                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-forest-100 text-forest-700">둔감형 · 영향 적음</span>
-                <div class="font-black text-sm text-forest-800 mt-2">🛡️ 카페인 영향 적은 사람</div>
-                <p class="text-[11px] text-beige-800 mt-1 leading-snug">간 해독 효소 활성도가 높고 <b>부교감신경이 빠르게 박동을 안정</b>시킴</p>
-              </div>
-              <div class="mt-3 pt-2 border-t border-beige-200 text-[11px] font-bold text-forest-600">
-                반감기: 약 2시간 (빠른 분해)
-              </div>
-            </button>
-
-            <!-- 일반인 (표준 대사) -->
-            <button onclick="selectPersona('normal')" id="persona-card-normal" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
-              <div>
-                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-beige-200 text-forest-800">일반형 · 표준 반응</span>
-                <div class="font-black text-sm text-forest-800 mt-2">🧑 일반인 (표준 대사)</div>
-                <p class="text-[11px] text-beige-800 mt-1 leading-snug">섭취 45분 후 혈중 농도 최고점 도달, <b>완만한 교감신경 활성</b></p>
-              </div>
-              <div class="mt-3 pt-2 border-t border-beige-200 text-[11px] font-bold text-beige-800">
-                반감기: 약 3.5~4시간
-              </div>
-            </button>
-
-            <!-- 민감형 (영향 큰 사람) -->
-            <button onclick="selectPersona('high_effect')" id="persona-card-high_effect" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
-              <div>
-                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-crimson-500 text-white">민감형 · 영향 큼</span>
-                <div class="font-black text-sm text-forest-800 mt-2">🔥 카페인 영향 큰 사람</div>
-                <p class="text-[11px] text-beige-800 mt-1 leading-snug">분해 효소가 적어 <b>동방결절 과흥분(빈맥·가슴 두근거림)</b> 지속</p>
-              </div>
-              <div class="mt-3 pt-2 border-t border-beige-200 text-[11px] font-bold text-crimson-600">
-                반감기: 6시간 이상 (장기 잔류)
-              </div>
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- 메인 시뮬레이션 보드: 좌측 심박동 그래프 (7칸) + 우측 심장 박동 일러스트 모니터 (5칸) -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-
-        <!-- 좌측: 시간 경과에 따른 심박동 변화 그래프 (7/12) -->
-        <div class="lg:col-span-7 bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm flex flex-col justify-between">
-          <div>
-            <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
-              <div>
-                <span class="text-xs font-extrabold text-forest-600 uppercase tracking-wider">REAL-TIME BIOMETRIC GRAPH</span>
-                <h3 class="text-lg font-black text-forest-800 mt-0.5">섭취 후 시간에 따른 심박수(BPM) 변화 그래프</h3>
-              </div>
-              <div id="selected-summary-pill" class="px-3.5 py-1.5 rounded-xl bg-forest-600 text-beige-50 text-xs font-extrabold shadow-sm">
-                몬스터(110mg) × 일반인
-              </div>
-            </div>
-
-            <!-- 범례 안내 배지 -->
-            <div class="flex flex-wrap items-center gap-3 text-xs bg-beige-100 px-3.5 py-2 rounded-xl border border-beige-200 mb-3">
-              <span class="flex items-center gap-1.5 font-bold text-crimson-600">
-                <span class="w-3 h-3 rounded-full bg-crimson-500 inline-block"></span> 빨간 굵은 선: 영향 큰 사람(민감형)
-              </span>
-              <span class="flex items-center gap-1.5 font-bold text-forest-700">
-                <span class="w-3 h-3 rounded-full bg-forest-600 inline-block"></span> 녹색 선: 일반인
-              </span>
-              <span class="flex items-center gap-1.5 font-bold text-beige-800">
-                <span class="w-3 h-3 rounded-full bg-amber-700 inline-block"></span> 갈색 점선: 영향 적은 사람(둔감형)
-              </span>
-            </div>
-
-            <!-- Chart.js 캔버스 래퍼 -->
-            <div class="relative w-full h-64 sm:h-72 bg-FAF7F0 rounded-xl p-2 border border-beige-200">
-              <canvas id="heartbeatChart"></canvas>
+              <!-- HIGH: 대용량 아이스 아메리카노 -->
+              <button onclick="selectDrink('high')" id="drink-card-high" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
+                <div>
+                  <div class="flex justify-between items-center">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-black bg-crimson-500 text-white">HIGH · 높음</span>
+                    <span class="text-xs font-extrabold text-crimson-600">280mg</span>
+                  </div>
+                  <div class="font-black text-sm text-forest-800 mt-2">☕ 대용량 아메리카노</div>
+                  <p class="text-[11px] text-beige-800 mt-1 leading-snug">메가·벤티 사이즈 4샷 기준. <b>급격한 교감신경 흥분</b> 유발</p>
+                </div>
+                <div class="mt-3 pt-2 border-t border-beige-200 flex justify-between items-center text-[11px] font-bold">
+                  <span class="text-crimson-600 font-black">권고량의 187% 초과!</span>
+                </div>
+              </button>
             </div>
           </div>
 
-          <!-- 하단 시간 슬라이더 및 자동 재생 컨트롤러 -->
-          <div class="mt-4 bg-beige-100 p-4 rounded-xl border-2 border-beige-200 space-y-3">
-            <div class="flex flex-wrap justify-between items-center gap-2">
-              <div class="flex items-center gap-2">
-                <span class="px-2.5 py-1 bg-crimson-500 text-white text-xs font-black rounded-lg">현재 관찰 시점</span>
-                <span id="time-status-text" class="text-sm font-black text-forest-800">섭취 후 45분 (혈중 카페인 농도 최고 도달!)</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <button onclick="toggleSimulationPlay()" id="sim-play-btn" class="px-4 py-1.5 bg-forest-600 hover:bg-forest-700 text-beige-50 text-xs font-extrabold rounded-lg transition shadow-sm flex items-center gap-1.5">
-                  <span>▶</span> <span>전체 시간 재생</span>
-                </button>
-                <button onclick="resetSimulationTime()" class="px-3 py-1.5 bg-beige-200 hover:bg-beige-300 text-forest-800 text-xs font-bold rounded-lg transition">
-                  피크(45분)로 이동
-                </button>
-              </div>
+          <!-- 2. 카페인 민감도 체질 3종 선택 카드 -->
+          <div class="bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-sm sm:text-base font-black text-forest-700 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-crimson-500 text-white text-xs flex items-center justify-center">2</span>
+                섭취자의 카페인 체질 선택 (CYP1A2 효소 및 수용체 민감도)
+              </h2>
+              <span class="text-[11px] font-bold text-forest-600 bg-forest-50 px-2.5 py-0.5 rounded-full border border-forest-100">체질 비교 가능</span>
             </div>
 
-            <!-- 슬라이더 (0 ~ 6 인덱스: 0분, 15분, 30분, 45분, 90분, 150분, 240분) -->
-            <div class="px-1">
-              <input type="range" id="time-slider" min="0" max="6" step="1" value="3" oninput="onSliderChange(this.value)" class="w-full">
-              <div class="flex justify-between text-[11px] font-extrabold text-forest-700 mt-1.5">
-                <span>0분<br><span class="font-normal text-[10px] text-beige-800">섭취 전</span></span>
-                <span>15분<br><span class="font-normal text-[10px] text-beige-800">위장 흡수</span></span>
-                <span>30분<br><span class="font-normal text-[10px] text-beige-800">혈류 이동</span></span>
-                <span class="text-crimson-600">45분<br><span class="font-black text-[10px]">최고 농도</span></span>
-                <span>90분<br><span class="font-normal text-[10px] text-beige-800">간 대사중</span></span>
-                <span>150분<br><span class="font-normal text-[10px] text-beige-800">반감 진행</span></span>
-                <span>240분<br><span class="font-normal text-[10px] text-beige-800">4시간 경과</span></span>
-              </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <!-- 둔감형 -->
+              <button onclick="selectPersona('low_effect')" id="persona-card-low_effect" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
+                <div>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-black bg-forest-100 text-forest-700">둔감형 · 영향 적음</span>
+                  <div class="font-black text-sm text-forest-800 mt-2">🛡️ 카페인 영향 적은 사람</div>
+                  <p class="text-[11px] text-beige-800 mt-1 leading-snug">간 해독 효소 활성도가 높고 <b>부교감신경이 빠르게 박동을 안정</b>시킴</p>
+                </div>
+                <div class="mt-3 pt-2 border-t border-beige-200 text-[11px] font-bold text-forest-600">
+                  반감기: 약 2시간 (빠른 분해)
+                </div>
+              </button>
+
+              <!-- 일반인 -->
+              <button onclick="selectPersona('normal')" id="persona-card-normal" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
+                <div>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-black bg-beige-200 text-forest-800">일반형 · 표준 반응</span>
+                  <div class="font-black text-sm text-forest-800 mt-2">🧑 일반인 (표준 대사)</div>
+                  <p class="text-[11px] text-beige-800 mt-1 leading-snug">섭취 45분 후 혈중 농도 최고점 도달, <b>완만한 교감신경 활성</b></p>
+                </div>
+                <div class="mt-3 pt-2 border-t border-beige-200 text-[11px] font-bold text-beige-800">
+                  반감기: 약 3.5~4시간
+                </div>
+              </button>
+
+              <!-- 민감형 -->
+              <button onclick="selectPersona('high_effect')" id="persona-card-high_effect" class="p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between">
+                <div>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-black bg-crimson-500 text-white">민감형 · 영향 큼</span>
+                  <div class="font-black text-sm text-forest-800 mt-2">🔥 카페인 영향 큰 사람</div>
+                  <p class="text-[11px] text-beige-800 mt-1 leading-snug">분해 효소가 적어 <b>동방결절 과흥분(빈맥·가슴 두근거림)</b> 지속</p>
+                </div>
+                <div class="mt-3 pt-2 border-t border-beige-200 text-[11px] font-bold text-crimson-600">
+                  반감기: 6시간 이상 (장기 잔류)
+                </div>
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- 우측: 그래프 옆 실시간 심박동 움직임 심장 일러스트 & 자율신경 모니터 (5/12) -->
-        <div class="lg:col-span-5 bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
+        <!-- 메인 시뮬레이션 보드: 좌측 그래프 (7칸) + 우측 심장 일러스트 모니터 (5칸) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
 
-          <!-- 상단 상태 헤더 -->
-          <div class="flex justify-between items-center border-b border-beige-200 pb-3">
+          <!-- 좌측: 시간 경과에 따른 심박동 변화 그래프 (7/12) -->
+          <div class="lg:col-span-7 bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm flex flex-col justify-between">
             <div>
-              <span class="text-[11px] font-extrabold text-crimson-600 uppercase tracking-wider">ANATOMICAL HEART MONITOR</span>
-              <h3 class="text-base font-black text-forest-800">실시간 심장 박동 & 자율신경 일러스트</h3>
-            </div>
-            <span id="autonomic-badge" class="px-3 py-1 rounded-full text-xs font-black bg-crimson-500 text-white shadow-sm">
-              교감신경 우위
-            </span>
-          </div>
-
-          <!-- 중앙: 심장 해부학 일러스트 SVG + 신경 전달 시각화 -->
-          <div class="my-3 py-2 bg-beige-100/80 rounded-2xl border border-beige-200 flex flex-col items-center justify-center relative">
-
-            <!-- 좌/우 신경 자극 상태 표시 라벨 -->
-            <div class="w-full px-3 flex justify-between items-start text-[11px] z-10 mb-1">
-              <div id="sympathetic-box" class="bg-crimson-50 border border-crimson-500/40 text-crimson-700 px-2.5 py-1.5 rounded-lg font-bold transition-all">
-                🔥 <b>교감신경</b> (촉진)<br>
-                <span class="text-[10px]">노르에피네프린 분비 <b id="symp-level">증가 ↑</b></span>
-              </div>
-              <div id="parasympathetic-box" class="bg-forest-50 border border-forest-500/40 text-forest-700 px-2.5 py-1.5 rounded-lg font-bold transition-all text-right">
-                🌿 <b>부교감신경</b> (억제)<br>
-                <span class="text-[10px]">아세틸콜린 분비 <b id="para-level">둔화 ↓</b></span>
-              </div>
-            </div>
-
-            <!-- 심장 뒤쪽 박동 오라(Aura) -->
-            <div id="heart-aura" class="w-36 h-36 rounded-full blur-2xl absolute opacity-35 bg-crimson-500 transition-colors duration-500 pointer-events-none"></div>
-
-            <!-- 커스텀 해부학 심장 SVG 일러스트 (BPM에 맞춰 실제 속도로 수축·이완) -->
-            <svg id="animated-heart-svg" class="w-44 h-44 beating-heart z-10 drop-shadow-md" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- 교감신경 다발 (붉은 신경선 - 좌측 상단에서 동방결절로 연결) -->
-              <path id="symp-nerve-line" d="M20 40 Q50 55 78 76" stroke="#D62828" stroke-width="3" stroke-dasharray="4 3" />
-              <!-- 부교감신경/미주신경 다발 (녹색 신경선 - 우측 상단에서 동방결절로 연결) -->
-              <path id="para-nerve-line" d="M200 40 Q140 55 86 76" stroke="#2D6A4F" stroke-width="3" stroke-dasharray="4 3" />
-
-              <!-- 상대정맥 (Superior Vena Cava - 청록/녹색 계열 정맥 표현) -->
-              <path d="M68 38 C68 25, 86 25, 86 38 L86 72 L68 72 Z" fill="#2D6A4F" stroke="#143629" stroke-width="2.5"/>
-              <!-- 폐동맥 (Pulmonary Artery) -->
-              <path d="M105 68 C125 48, 155 50, 162 62 C166 70, 150 78, 130 78" fill="#40916C" stroke="#143629" stroke-width="2.5"/>
-
-              <!-- 대동맥궁 (Aortic Arch - 선명한 크림슨 레드) -->
-              <path d="M90 66 C88 30, 135 22, 142 52 C145 64, 132 72, 120 72" fill="#B81D1D" stroke="#640A0A" stroke-width="3"/>
-              <!-- 대동맥 상단 분지 혈관 3개 -->
-              <rect x="100" y="18" width="7" height="16" rx="3" fill="#B81D1D" stroke="#640A0A" stroke-width="2"/>
-              <rect x="112" y="16" width="7" height="18" rx="3" fill="#B81D1D" stroke="#640A0A" stroke-width="2"/>
-              <rect x="124" y="20" width="7" height="16" rx="3" fill="#B81D1D" stroke="#640A0A" stroke-width="2"/>
-
-              <!-- 우심방 (Right Atrium) -->
-              <path d="M68 68 C44 72, 42 108, 66 118 C78 122, 88 110, 88 92 Z" fill="#C92A2A" stroke="#640A0A" stroke-width="3"/>
-              <!-- 좌심방 (Left Atrium) -->
-              <path d="M132 68 C154 70, 162 94, 146 110 C136 118, 122 106, 122 90 Z" fill="#C92A2A" stroke="#640A0A" stroke-width="3"/>
-
-              <!-- 심실 본체 (우심실 + 좌심실 해부학적 비대칭 셰이프) -->
-              <path id="heart-ventricle" d="M62 106 C52 138, 78 176, 118 192 C126 195, 134 190, 138 182 C158 152, 166 116, 146 96 C132 82, 80 82, 62 106 Z" fill="#D62828" stroke="#640A0A" stroke-width="3.5"/>
-
-              <!-- 관상동맥 (Coronary Arteries - 심장 근육에 산소 공급) -->
-              <path d="M98 92 C102 122, 112 148, 124 178" stroke="#FAF7F0" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
-              <path d="M103 118 C90 130, 82 142, 76 156" stroke="#FAF7F0" stroke-width="2.2" stroke-linecap="round" opacity="0.8"/>
-              <path d="M108 134 C124 140, 136 148, 144 160" stroke="#FAF7F0" stroke-width="2.2" stroke-linecap="round" opacity="0.8"/>
-
-              <!-- 심장 표면 입체 하이라이트 -->
-              <ellipse cx="136" cy="128" rx="9" ry="22" transform="rotate(18 136 128)" fill="#FAF7F0" opacity="0.22"/>
-
-              <!-- 동방결절 (SA Node - 우심방 상단 박동 원천) -->
-              <circle id="sa-wave-circle" cx="72" cy="82" r="10" fill="#FAF7F0" class="sa-wave"/>
-              <circle cx="72" cy="82" r="6" fill="#FAF7F0" stroke="#143629" stroke-width="2"/>
-              <text x="45" y="102" fill="#FAF7F0" font-size="9" font-weight="900">동방결절(SA)</text>
-            </svg>
-
-            <div class="text-[11px] font-bold text-forest-800 bg-beige-50 px-3 py-1 rounded-full border border-beige-200 shadow-sm mt-1">
-              ⚡ 하얀 점(동방결절)이 <span id="cycle-text-inline" class="text-crimson-600 font-black">0.70초</span>마다 전기 신호를 발생시킵니다
-            </div>
-          </div>
-
-          <!-- 하단: 실시간 수치 계기판 + 심전도(ECG) 파형 + 생명과학 해설 -->
-          <div class="bg-forest-700 text-beige-50 p-4 rounded-xl space-y-2.5 shadow-inner">
-            <div class="flex items-center justify-between">
-              <div>
-                <span class="text-[11px] text-beige-200 font-semibold">현재 심박수 (Heart Rate)</span>
-                <div class="flex items-baseline gap-1.5">
-                  <span id="live-bpm-number" class="text-3xl sm:text-4xl font-black text-beige-50">86</span>
-                  <span class="text-xs font-extrabold text-crimson-100 bg-crimson-600 px-2 py-0.5 rounded">BPM (회/분)</span>
+              <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
+                <div>
+                  <span class="text-xs font-extrabold text-forest-600 uppercase tracking-wider">REAL-TIME BIOMETRIC GRAPH</span>
+                  <h3 class="text-lg font-black text-forest-800 mt-0.5">섭취 후 시간에 따른 심박수(BPM) 변화 그래프</h3>
+                </div>
+                <div id="selected-summary-pill" class="px-3.5 py-1.5 rounded-xl bg-forest-600 text-beige-50 text-xs font-extrabold shadow-sm">
+                  몬스터(110mg) × 일반인
                 </div>
               </div>
-              <div class="text-right">
-                <span class="text-[11px] text-beige-200 font-semibold">심장 박동 주기 (1회 수축·이완)</span>
-                <div id="live-beat-cycle" class="text-lg font-black text-forest-100">0.70 초/회</div>
+
+              <!-- 범례 안내 배지 -->
+              <div class="flex flex-wrap items-center gap-3 text-xs bg-beige-100 px-3.5 py-2 rounded-xl border border-beige-200 mb-3">
+                <span class="flex items-center gap-1.5 font-bold text-crimson-600">
+                  <span class="w-3 h-3 rounded-full bg-crimson-500 inline-block"></span> 빨간 선: 영향 큰 사람(민감형)
+                </span>
+                <span class="flex items-center gap-1.5 font-bold text-forest-700">
+                  <span class="w-3 h-3 rounded-full bg-forest-600 inline-block"></span> 녹색 선: 일반인
+                </span>
+                <span class="flex items-center gap-1.5 font-bold text-beige-800">
+                  <span class="w-3 h-3 rounded-full bg-amber-700 inline-block"></span> 갈색 선: 영향 적은 사람(둔감형)
+                </span>
+              </div>
+
+              <!-- Chart.js 캔버스 -->
+              <div class="relative w-full h-64 sm:h-72 bg-beige-50 rounded-xl p-2 border border-beige-200">
+                <canvas id="heartbeatChart"></canvas>
               </div>
             </div>
 
-            <!-- 실시간 심전도(ECG) 캔버스 (BPM에 따라 파형 간격이 실시간 변화) -->
-            <div class="bg-forest-800 rounded-lg p-1.5 border border-forest-600">
-              <canvas id="ecgCanvas" height="46" class="w-full block"></canvas>
+            <!-- 하단 시간 슬라이더 및 자동 재생 컨트롤러 -->
+            <div class="mt-4 bg-beige-100 p-4 rounded-xl border-2 border-beige-200 space-y-3">
+              <div class="flex flex-wrap justify-between items-center gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-1 bg-crimson-500 text-white text-xs font-black rounded-lg">현재 관찰 시점</span>
+                  <span id="time-status-text" class="text-sm font-black text-forest-800">섭취 후 45분 (혈중 카페인 농도 최고 도달!)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button onclick="toggleSimulationPlay()" id="sim-play-btn" class="px-4 py-1.5 bg-forest-600 hover:bg-forest-700 text-beige-50 text-xs font-extrabold rounded-lg transition shadow-sm flex items-center gap-1.5">
+                    <span>▶</span> <span>전체 시간 재생</span>
+                  </button>
+                  <button onclick="resetSimulationTime()" class="px-3 py-1.5 bg-beige-200 hover:bg-beige-300 text-forest-800 text-xs font-bold rounded-lg transition">
+                    피크(45분)로 이동
+                  </button>
+                </div>
+              </div>
+
+              <div class="px-1">
+                <input type="range" id="time-slider" min="0" max="6" step="1" value="3" oninput="onSliderChange(this.value)" class="w-full">
+                <div class="flex justify-between text-[11px] font-extrabold text-forest-700 mt-1.5">
+                  <span>0분<br><span class="font-normal text-[10px] text-beige-800">섭취 전</span></span>
+                  <span>15분<br><span class="font-normal text-[10px] text-beige-800">위장 흡수</span></span>
+                  <span>30분<br><span class="font-normal text-[10px] text-beige-800">혈류 이동</span></span>
+                  <span class="text-crimson-600">45분<br><span class="font-black text-[10px]">최고 농도</span></span>
+                  <span>90분<br><span class="font-normal text-[10px] text-beige-800">간 대사중</span></span>
+                  <span>150분<br><span class="font-normal text-[10px] text-beige-800">반감 진행</span></span>
+                  <span>240분<br><span class="font-normal text-[10px] text-beige-800">4시간 경과</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 우측: 실시간 심장 박동 일러스트 모니터 (5/12) -->
+          <div class="lg:col-span-5 bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
+            <div class="flex justify-between items-center border-b border-beige-200 pb-3">
+              <div>
+                <span class="text-[11px] font-extrabold text-crimson-600 uppercase tracking-wider">ANATOMICAL HEART MONITOR</span>
+                <h3 class="text-base font-black text-forest-800">실시간 심장 박동 & 자율신경 일러스트</h3>
+              </div>
+              <span id="autonomic-badge" class="px-3 py-1 rounded-full text-xs font-black bg-crimson-500 text-white shadow-sm">
+                교감신경 우위
+              </span>
             </div>
 
-            <!-- 현재 생리학적 상태 해설 -->
-            <p id="live-bio-explanation" class="text-xs text-beige-100 leading-relaxed pt-1 border-t border-forest-600">
-              해설 로딩 중...
+            <!-- 중앙: 심장 해부학 일러스트 SVG -->
+            <div class="my-3 py-2 bg-beige-100/80 rounded-2xl border border-beige-200 flex flex-col items-center justify-center relative">
+              <div class="w-full px-3 flex justify-between items-start text-[11px] z-10 mb-1">
+                <div id="sympathetic-box" class="bg-crimson-50 border border-crimson-500/40 text-crimson-700 px-2.5 py-1.5 rounded-lg font-bold transition-all">
+                  🔥 <b>교감신경</b> (촉진)<br>
+                  <span class="text-[10px]">노르에피네프린 분비 <b id="symp-level">증가 ↑</b></span>
+                </div>
+                <div id="parasympathetic-box" class="bg-forest-50 border border-forest-500/40 text-forest-700 px-2.5 py-1.5 rounded-lg font-bold transition-all text-right">
+                  🌿 <b>부교감신경</b> (억제)<br>
+                  <span class="text-[10px]">아세틸콜린 분비 <b id="para-level">둔화 ↓</b></span>
+                </div>
+              </div>
+
+              <div id="heart-aura" class="w-36 h-36 rounded-full blur-2xl absolute opacity-35 bg-crimson-500 transition-colors duration-500 pointer-events-none"></div>
+
+              <svg id="animated-heart-svg" class="w-44 h-44 beating-heart z-10 drop-shadow-md" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path id="symp-nerve-line" d="M20 40 Q50 55 78 76" stroke="#D62828" stroke-width="3" stroke-dasharray="4 3" />
+                <path id="para-nerve-line" d="M200 40 Q140 55 86 76" stroke="#2D6A4F" stroke-width="3" stroke-dasharray="4 3" />
+                <path d="M68 38 C68 25, 86 25, 86 38 L86 72 L68 72 Z" fill="#2D6A4F" stroke="#143629" stroke-width="2.5"/>
+                <path d="M105 68 C125 48, 155 50, 162 62 C166 70, 150 78, 130 78" fill="#40916C" stroke="#143629" stroke-width="2.5"/>
+                <path d="M90 66 C88 30, 135 22, 142 52 C145 64, 132 72, 120 72" fill="#B81D1D" stroke="#640A0A" stroke-width="3"/>
+                <rect x="100" y="18" width="7" height="16" rx="3" fill="#B81D1D" stroke="#640A0A" stroke-width="2"/>
+                <rect x="112" y="16" width="7" height="18" rx="3" fill="#B81D1D" stroke="#640A0A" stroke-width="2"/>
+                <rect x="124" y="20" width="7" height="16" rx="3" fill="#B81D1D" stroke="#640A0A" stroke-width="2"/>
+                <path d="M68 68 C44 72, 42 108, 66 118 C78 122, 88 110, 88 92 Z" fill="#C92A2A" stroke="#640A0A" stroke-width="3"/>
+                <path d="M132 68 C154 70, 162 94, 146 110 C136 118, 122 106, 122 90 Z" fill="#C92A2A" stroke="#640A0A" stroke-width="3"/>
+                <path id="heart-ventricle" d="M62 106 C52 138, 78 176, 118 192 C126 195, 134 190, 138 182 C158 152, 166 116, 146 96 C132 82, 80 82, 62 106 Z" fill="#D62828" stroke="#640A0A" stroke-width="3.5"/>
+                <path d="M98 92 C102 122, 112 148, 124 178" stroke="#FAF7F0" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+                <path d="M103 118 C90 130, 82 142, 76 156" stroke="#FAF7F0" stroke-width="2.2" stroke-linecap="round" opacity="0.8"/>
+                <path d="M108 134 C124 140, 136 148, 144 160" stroke="#FAF7F0" stroke-width="2.2" stroke-linecap="round" opacity="0.8"/>
+                <ellipse cx="136" cy="128" rx="9" ry="22" transform="rotate(18 136 128)" fill="#FAF7F0" opacity="0.22"/>
+                <circle id="sa-wave-circle" cx="72" cy="82" r="10" fill="#FAF7F0" class="sa-wave"/>
+                <circle cx="72" cy="82" r="6" fill="#FAF7F0" stroke="#143629" stroke-width="2"/>
+                <text x="45" y="102" fill="#FAF7F0" font-size="9" font-weight="900">동방결절(SA)</text>
+              </svg>
+
+              <div class="text-[11px] font-bold text-forest-800 bg-beige-50 px-3 py-1 rounded-full border border-beige-200 shadow-sm mt-1">
+                ⚡ 하얀 점(동방결절)이 <span id="cycle-text-inline" class="text-crimson-600 font-black">0.70초</span>마다 전기 신호를 발생시킵니다
+              </div>
+            </div>
+
+            <!-- 하단: 실시간 수치 계기판 + 심전도(ECG) 파형 -->
+            <div class="bg-forest-700 text-beige-50 p-4 rounded-xl space-y-2.5 shadow-inner">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-[11px] text-beige-200 font-semibold">현재 심박수 (Heart Rate)</span>
+                  <div class="flex items-baseline gap-1.5">
+                    <span id="live-bpm-number" class="text-3xl sm:text-4xl font-black text-beige-50">86</span>
+                    <span class="text-xs font-extrabold text-crimson-100 bg-crimson-600 px-2 py-0.5 rounded">BPM (회/분)</span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <span class="text-[11px] text-beige-200 font-semibold">심장 박동 주기 (1회 수축·이완)</span>
+                  <div id="live-beat-cycle" class="text-lg font-black text-forest-100">0.70 초/회</div>
+                </div>
+              </div>
+
+              <div class="bg-forest-800 rounded-lg p-1.5 border border-forest-600">
+                <canvas id="ecgCanvas" height="46" class="w-full block"></canvas>
+              </div>
+
+              <p id="live-bio-explanation" class="text-xs text-beige-100 leading-relaxed pt-1 border-t border-forest-600">
+                해설 로딩 중...
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 하단 3체질 비교 데이터 요약표 -->
+        <div class="bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <h3 class="text-sm sm:text-base font-black text-forest-800 flex items-center gap-2">
+              <span>📊</span> 현재 선택 음료(<span id="table-drink-title" class="text-crimson-600">몬스터 110mg</span>) 섭취 시 체질별 심박수(BPM) 비교표
+            </h3>
+            <button onclick="switchPage(2)" class="px-4 py-1.5 bg-crimson-500 hover:bg-crimson-600 text-white text-xs font-black rounded-lg shadow transition">
+              이 실험 결과로 2번 페이지 보고서 작성하기 →
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs sm:text-sm text-center border-collapse">
+              <thead>
+                <tr class="bg-forest-600 text-beige-50 font-extrabold">
+                  <th class="p-2.5 rounded-tl-xl text-left">체질 분류 (자율신경·대사 특성)</th>
+                  <th class="p-2.5">0분 (섭취 전)</th>
+                  <th class="p-2.5">15분</th>
+                  <th class="p-2.5">30분</th>
+                  <th class="p-2.5 bg-crimson-600">45분 (피크)</th>
+                  <th class="p-2.5">90분</th>
+                  <th class="p-2.5">150분</th>
+                  <th class="p-2.5 rounded-tr-xl">240분 (4시간 후)</th>
+                </tr>
+              </thead>
+              <tbody id="comparison-table-body" class="divide-y divide-beige-200 font-medium">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- [1번 페이지 - 탭 B] 자율신경계 원리 & 연습 퀴즈 -->
+      <section id="tab-content-concept" class="hidden space-y-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div class="bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm space-y-2">
+            <span class="px-2.5 py-1 bg-forest-100 text-forest-700 text-xs font-black rounded-lg">원리 1 · 피로 신호 차단</span>
+            <h3 class="text-base font-black text-forest-800 pt-1">아데노신 수용체의 ‘위장 취업’</h3>
+            <p class="text-xs sm:text-sm text-beige-900 leading-relaxed">
+              뇌가 활동하면 피로 물질인 <b>아데노신</b>이 수용체에 결합해 부교감신경을 활성화(휴식 유도)합니다. 하지만 <b>카페인</b>은 아데노신과 입체 구조가 비슷해 수용체에 먼저 결합하여 피로 브레이크를 차단합니다.
             </p>
           </div>
 
+          <div class="bg-beige-50 p-5 rounded-2xl border-2 border-crimson-500/40 shadow-sm space-y-2">
+            <span class="px-2.5 py-1 bg-crimson-500 text-white text-xs font-black rounded-lg">원리 2 · 교감신경 흥분</span>
+            <h3 class="text-base font-black text-crimson-700 pt-1">동방결절과 노르에피네프린</h3>
+            <p class="text-xs sm:text-sm text-beige-900 leading-relaxed">
+              브레이크가 풀리면 연수(심장 박동 조절 중추)를 통해 <b>교감신경</b>이 흥분합니다. 교감신경 신경절 이후 뉴런 말단에서 분비된 <b>노르에피네프린</b>이 <b>동방결절(SA node)</b>을 자극해 박동 주기를 짧게 만듭니다.
+            </p>
+          </div>
+
+          <div class="bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm space-y-2">
+            <span class="px-2.5 py-1 bg-forest-600 text-beige-50 text-xs font-black rounded-lg">원리 3 · 효소와 길항 작용</span>
+            <h3 class="text-base font-black text-forest-800 pt-1">왜 사람마다 그래프가 다를까?</h3>
+            <p class="text-xs sm:text-sm text-beige-900 leading-relaxed">
+              간에서 카페인을 분해하는 효소(<b>CYP1A2</b>)가 풍부한 <b>둔감형</b>은 카페인을 빨리 해독하고 <b>부교감신경(아세틸콜린 분비)</b>이 심박수를 원래대로 낮춥니다. 반면 <b>민감형</b>은 고박동 상태가 수 시간 지속됩니다.
+            </p>
+          </div>
         </div>
+
+        <div class="bg-beige-50 p-6 rounded-2xl border-2 border-beige-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-extrabold text-crimson-600">READY FOR ASSESSMENT</span>
+            <h3 class="text-lg font-black text-forest-800 mt-0.5">원리 학습을 마쳤나요? 이제 2번 페이지에서 활동 보고서를 제출하세요!</h3>
+            <p class="text-xs text-beige-800 mt-1">2번 페이지에는 5점 배점의 실전 이론 객관식 문제 1문항과 카페인 탐구보고서 논술형 제출 창이 준비되어 있습니다.</p>
+          </div>
+          <button onclick="switchPage(2)" class="px-6 py-3 bg-crimson-500 hover:bg-crimson-600 text-white font-black text-sm rounded-xl shadow-md transition whitespace-nowrap">
+            2번 페이지(보고서 활동)로 이동 →
+          </button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- [2번 페이지] 학생 보고서 활동 & '심박동 보고서 제출' 스프레드시트 연동 -->
+    <!-- =================================================================== -->
+    <div id="page-2-container" class="hidden space-y-6">
+
+      <!-- 상단 안내 배너 -->
+      <div class="bg-beige-50 p-5 rounded-2xl border-2 border-forest-600 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-0.5 bg-forest-600 text-beige-50 text-xs font-black rounded-full">2번 페이지 · 학생 보고서 활동</span>
+            <span id="sheet-connection-pill" class="px-3 py-0.5 bg-crimson-50 text-crimson-700 border border-crimson-200 text-xs font-extrabold rounded-full">
+              📊 '심박동 보고서 제출' 스프레드시트 연동 대기/시뮬레이션 모드
+            </span>
+          </div>
+          <h2 class="text-xl font-black text-forest-800">심박동 자율신경계 확인 문제(5점) 및 카페인 탐구보고서 제출</h2>
+          <p class="text-xs text-beige-800">
+            작성 후 하단의 <b>[심박동 보고서 제출하기]</b> 버튼을 누르면 <b>‘심박동 보고서 제출’</b> 스프레드시트의 <b>A열~G열</b>에 자동 기록됩니다.
+          </p>
+        </div>
+        <button onclick="switchPage(1)" class="px-4 py-2.5 bg-beige-200 hover:bg-beige-300 text-forest-800 text-xs font-extrabold rounded-xl transition whitespace-nowrap">
+          ← 1번 페이지(시뮬레이터) 다시 보기
+        </button>
       </div>
 
-      <!-- 하단 한눈에 보는 3체질 비교 데이터 요약표 -->
-      <div class="bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm">
-        <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
-          <h3 class="text-sm sm:text-base font-black text-forest-800 flex items-center gap-2">
-            <span>📊</span> 현재 선택 음료(<span id="table-drink-title" class="text-crimson-600">몬스터 110mg</span>) 섭취 시 체질별 심박수(BPM) 비교표
-          </h3>
-          <span class="text-xs font-bold text-beige-800">※ 심박동 주기(초) = 60초 ÷ 분당 심박수(BPM)</span>
+      <!-- 보고서 작성 폼 카드 -->
+      <form id="student-report-form" onsubmit="handleReportSubmit(event)" class="bg-beige-50 p-6 sm:p-7 rounded-2xl border-2 border-beige-200 shadow-md space-y-6">
+
+        <!-- 1. 학생 인적사항 입력 영역 (학년 체크박스 / 반 동적 드롭다운 / 번호 드롭다운 / 이름) -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between border-b-2 border-beige-200 pb-2.5">
+            <h3 class="text-base sm:text-lg font-black text-forest-800 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-forest-600 text-beige-50 text-xs flex items-center justify-center">1</span>
+              학생 인적사항 입력 <span class="text-xs font-bold text-beige-800">(스프레드시트 B열~E열 자동 매핑)</span>
+            </h3>
+            <span class="text-xs font-bold text-crimson-600">* 모든 항목 필수 선택/입력</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+
+            <!-- 학년 (체크박스 1~3학년) - 4칸 -->
+            <div class="md:col-span-4">
+              <label class="block text-xs font-extrabold text-forest-700 mb-2">
+                학년 선택 (체크박스 1~3학년) <span class="text-crimson-600">*</span>
+              </label>
+              <div class="grid grid-cols-3 gap-2">
+                <label class="cursor-pointer">
+                  <input type="checkbox" name="grade_chk" value="1학년" onchange="onGradeCheckboxChange(this, 1)" class="grade-checkbox sr-only">
+                  <span class="block text-center py-2.5 px-3 rounded-xl border-2 border-beige-300 bg-beige-100 text-xs sm:text-sm font-black text-forest-800 transition hover:bg-beige-200 select-none">
+                    ☑️ 1학년
+                  </span>
+                </label>
+                <label class="cursor-pointer">
+                  <input type="checkbox" name="grade_chk" value="2학년" onchange="onGradeCheckboxChange(this, 2)" class="grade-checkbox sr-only" checked>
+                  <span class="block text-center py-2.5 px-3 rounded-xl border-2 border-beige-300 bg-beige-100 text-xs sm:text-sm font-black text-forest-800 transition hover:bg-beige-200 select-none">
+                    ☑️ 2학년
+                  </span>
+                </label>
+                <label class="cursor-pointer">
+                  <input type="checkbox" name="grade_chk" value="3학년" onchange="onGradeCheckboxChange(this, 3)" class="grade-checkbox sr-only">
+                  <span class="block text-center py-2.5 px-3 rounded-xl border-2 border-beige-300 bg-beige-100 text-xs sm:text-sm font-black text-forest-800 transition hover:bg-beige-200 select-none">
+                    ☑️ 3학년
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <!-- 반 (1,2학년: 1~11반 / 3학년: 1~12반 동적 드롭다운) - 3칸 -->
+            <div class="md:col-span-3">
+              <label for="student-class" class="block text-xs font-extrabold text-forest-700 mb-2">
+                반 선택 <span id="class-range-hint" class="text-[11px] font-bold text-crimson-600">(1~2학년: 1~11반)</span> <span class="text-crimson-600">*</span>
+              </label>
+              <select id="student-class" required class="w-full p-2.5 rounded-xl bg-beige-100 border-2 border-beige-300 text-sm font-extrabold text-forest-800 focus:outline-none focus:border-forest-600">
+                <!-- JS에서 학년에 따라 1~11반 또는 1~12반 동적 생성 -->
+              </select>
+            </div>
+
+            <!-- 번호 (드롭다운 1~30번) - 2칸 -->
+            <div class="md:col-span-2">
+              <label for="student-number" class="block text-xs font-extrabold text-forest-700 mb-2">
+                번호 (1~30번) <span class="text-crimson-600">*</span>
+              </label>
+              <select id="student-number" required class="w-full p-2.5 rounded-xl bg-beige-100 border-2 border-beige-300 text-sm font-extrabold text-forest-800 focus:outline-none focus:border-forest-600">
+                <!-- JS에서 1~30번 동적 생성 -->
+              </select>
+            </div>
+
+            <!-- 이름 (텍스트 입력) - 3칸 -->
+            <div class="md:col-span-3">
+              <label for="student-name" class="block text-xs font-extrabold text-forest-700 mb-2">
+                이름 <span class="text-crimson-600">*</span>
+              </label>
+              <input type="text" id="student-name" required placeholder="성명을 입력하세요 (예: 홍길동)" class="w-full p-2.5 rounded-xl bg-beige-100 border-2 border-beige-300 text-sm font-extrabold text-forest-800 placeholder:text-beige-800/50 focus:outline-none focus:border-forest-600">
+            </div>
+
+          </div>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs sm:text-sm text-center border-collapse">
+        <!-- 2. 심박동에 대한 이론적 객관식 문제 1개 (배점: 5점, F열 자동 기록) -->
+        <div class="space-y-3 pt-2">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-beige-200 pb-2.5">
+            <h3 class="text-base sm:text-lg font-black text-forest-800 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-crimson-500 text-white text-xs flex items-center justify-center">2</span>
+              심박동 조절의 이론적 원리 평가 문항 <span class="text-xs font-bold text-beige-800">(스프레드시트 F열: 객관식 점수 자동 채점)</span>
+            </h3>
+            <span class="px-3 py-1 bg-crimson-500 text-white text-xs font-black rounded-full shadow-sm">
+              배점: 5점 (정답 시 5점 / 오답 시 0점)
+            </span>
+          </div>
+
+          <div class="bg-beige-100 p-5 rounded-2xl border-2 border-beige-200 space-y-4">
+            <div class="space-y-1.5">
+              <span class="text-xs font-black text-crimson-600">[객관식 평가 문항]</span>
+              <p class="text-sm sm:text-base font-black text-forest-800 leading-snug">
+                Q. 고카페인 음료를 섭취했을 때 나타나는 <span class="underline decoration-crimson-500 decoration-2">심장 박동 조절과 자율신경계의 작용 원리</span>에 대한 설명으로 <b>가장 옳은 것</b>은? <span class="text-crimson-600 font-extrabold">[5점]</span>
+              </p>
+            </div>
+
+            <div class="space-y-2.5" id="mc-options-group">
+              <label class="flex items-start gap-3 p-3.5 rounded-xl bg-beige-50 hover:bg-beige-200/70 border-2 border-beige-200 cursor-pointer transition">
+                <input type="radio" name="theory_mc" value="1" class="mt-1 w-4 h-4 accent-crimson-500" required>
+                <span class="text-xs sm:text-sm font-bold text-forest-800 leading-relaxed">
+                  ① 카페인은 피로 물질인 아데노신 분비를 직접 촉진하여 부교감신경을 흥분시킨다.
+                </span>
+              </label>
+
+              <label class="flex items-start gap-3 p-3.5 rounded-xl bg-beige-50 hover:bg-beige-200/70 border-2 border-beige-200 cursor-pointer transition">
+                <input type="radio" name="theory_mc" value="2" class="mt-1 w-4 h-4 accent-crimson-500">
+                <span class="text-xs sm:text-sm font-bold text-forest-800 leading-relaxed">
+                  ② 교감신경의 신경절 이후 뉴런 말단에서는 <b>아세틸콜린</b>이 분비되어 동방결절의 활동 전위 발생 빈도를 높인다.
+                </span>
+              </label>
+
+              <!-- 정답: 3번 -->
+              <label class="flex items-start gap-3 p-3.5 rounded-xl bg-beige-50 hover:bg-beige-200/70 border-2 border-beige-200 cursor-pointer transition">
+                <input type="radio" name="theory_mc" value="3" class="mt-1 w-4 h-4 accent-crimson-500">
+                <span class="text-xs sm:text-sm font-bold text-forest-800 leading-relaxed">
+                  ③ 카페인 섭취로 <b>교감신경</b>이 흥분하면 신경 말단에서 <b>노르에피네프린</b>이 분비되어 심장의 박동 원천인 <b>동방결절(SA node)</b>의 박동 주기를 짧게(BPM 상승) 만든다.
+                </span>
+              </label>
+
+              <label class="flex items-start gap-3 p-3.5 rounded-xl bg-beige-50 hover:bg-beige-200/70 border-2 border-beige-200 cursor-pointer transition">
+                <input type="radio" name="theory_mc" value="4" class="mt-1 w-4 h-4 accent-crimson-500">
+                <span class="text-xs sm:text-sm font-bold text-forest-800 leading-relaxed">
+                  ④ 분당 심박수(BPM)가 70 BPM에서 118 BPM으로 증가하면, 심장 1회 박동 주기(수축+이완 시간)는 0.86초에서 1.20초로 길어진다.
+                </span>
+              </label>
+
+              <label class="flex items-start gap-3 p-3.5 rounded-xl bg-beige-50 hover:bg-beige-200/70 border-2 border-beige-200 cursor-pointer transition">
+                <input type="radio" name="theory_mc" value="5" class="mt-1 w-4 h-4 accent-crimson-500">
+                <span class="text-xs sm:text-sm font-bold text-forest-800 leading-relaxed">
+                  ⑤ 심장 박동의 자동성을 조절하는 자율신경의 최고 조절 중추는 척수(Spinal cord)이다.
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 카페인과 심박동에 관한 탐구보고서 제출 창 (논술형, G열 자동 기록) -->
+        <div class="space-y-3 pt-2">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-beige-200 pb-2.5">
+            <h3 class="text-base sm:text-lg font-black text-forest-800 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-forest-600 text-beige-50 text-xs flex items-center justify-center">3</span>
+              카페인과 심박동에 관한 탐구보고서 작성 (논술형) <span class="text-xs font-bold text-beige-800">(스프레드시트 G열: 서술형 문항)</span>
+            </h3>
+            <button type="button" onclick="insertSimSummaryToEssay()" class="px-3 py-1.5 bg-forest-100 hover:bg-forest-500 hover:text-white text-forest-700 text-xs font-extrabold rounded-lg border border-forest-500/30 transition">
+              + 1번 페이지 실험 수치 자동 불러오기
+            </button>
+          </div>
+
+          <div class="bg-beige-100 p-4 rounded-xl border border-beige-200 text-xs text-forest-800 space-y-1">
+            <div class="font-black text-forest-700">📌 [논술형 작성 가이드 — 아래 내용을 포함하여 서술하세요]</div>
+            <p>① 1번 페이지 시뮬레이터에서 관찰한 <b>음료 종류(말차라떼·몬스터·아메리카노) 및 체질(둔감형·일반인·민감형)에 따른 심박수(BPM)와 박동 주기의 변화 차이</b></p>
+            <p>② 이러한 차이가 발생하는 이유를 <b>자율신경계(교감·부교감신경의 길항 작용, 노르에피네프린·아세틸콜린)</b> 및 <b>카페인 반감기</b> 개념과 연결하여 논술하고, 본인의 건강한 카페인 섭취 기준을 제시하세요.</p>
+          </div>
+
+          <div class="relative">
+            <textarea id="essay-report-text" rows="6" required oninput="updateEssayCharCount()" placeholder="여기에 카페인과 심박동에 관한 탐구보고서(논술형 답안)를 작성하세요..." class="w-full p-4 rounded-2xl bg-beige-100 border-2 border-beige-300 text-xs sm:text-sm font-medium text-forest-900 leading-relaxed focus:outline-none focus:border-forest-600"></textarea>
+            <div class="flex justify-between items-center text-[11px] font-bold text-beige-800 mt-1 px-1">
+              <span>※ 줄바꿈을 포함하여 스프레드시트 G열(서술형 문항)에 전체 내용이 그대로 저장됩니다.</span>
+              <span>현재 글자 수: <b id="essay-char-count" class="text-forest-700">0</b>자</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 제출 버튼 영역 -->
+        <div class="pt-3 border-t-2 border-beige-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="text-xs text-beige-800 font-bold">
+            💡 제출 시 <b>[A열: 제출시간 | B열: 학년 | C열: 반 | D열: 번호 | E열: 이름 | F열: 객관식 점수 | G열: 서술형 문항]</b> 순으로 전송됩니다.
+          </div>
+          <button type="submit" id="submit-report-btn" class="w-full sm:w-auto px-8 py-4 bg-crimson-500 hover:bg-crimson-600 text-white font-black text-sm sm:text-base rounded-2xl shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2.5">
+            <span>🚀</span>
+            <span>심박동 보고서 제출하기</span>
+          </button>
+        </div>
+
+      </form>
+
+      <!-- '심박동 보고서 제출' 스프레드시트 (A열 ~ G열) 실시간 연동 현황 및 미리보기 보드 -->
+      <div class="bg-beige-50 p-6 rounded-2xl border-2 border-beige-200 shadow-sm space-y-4">
+        <div class="flex flex-wrap justify-between items-center gap-3">
+          <div>
+            <span class="px-2.5 py-0.5 bg-forest-600 text-beige-50 text-[11px] font-black rounded-full">SPREADSHEET STRUCTURE PREVIEW</span>
+            <h3 class="text-base sm:text-lg font-black text-forest-800 mt-1">
+              📄 ‘심박동 보고서 제출’ 스프레드시트 (A열~G열) 제출 내역 확인창
+            </h3>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="downloadCsvBackup()" class="px-3.5 py-2 bg-forest-600 hover:bg-forest-700 text-beige-50 text-xs font-extrabold rounded-xl transition shadow-sm">
+              📥 엑셀/스프레드시트(.CSV) 다운로드
+            </button>
+            <button onclick="openModal('sheet-modal')" class="px-3.5 py-2 bg-beige-200 hover:bg-beige-300 text-forest-800 text-xs font-extrabold rounded-xl transition">
+              ⚙️ 구글 시트 자동 생성 스크립트 보기
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border-2 border-beige-200">
+          <table class="w-full text-xs sm:text-sm text-left border-collapse">
             <thead>
-              <tr class="bg-forest-600 text-beige-50 font-extrabold">
-                <th class="p-2.5 rounded-tl-xl text-left">체질 분류 (자율신경·대사 특성)</th>
-                <th class="p-2.5">0분 (섭취 전)</th>
-                <th class="p-2.5">15분</th>
-                <th class="p-2.5">30분</th>
-                <th class="p-2.5 bg-crimson-600">45분 (피크)</th>
-                <th class="p-2.5">90분</th>
-                <th class="p-2.5">150분</th>
-                <th class="p-2.5 rounded-tr-xl">240분 (4시간 후)</th>
+              <tr class="bg-forest-700 text-beige-50 font-black text-center">
+                <th class="p-3 border-r border-forest-600 whitespace-nowrap">A열 : 제출시간</th>
+                <th class="p-3 border-r border-forest-600 whitespace-nowrap">B열 : 학년</th>
+                <th class="p-3 border-r border-forest-600 whitespace-nowrap">C열 : 반</th>
+                <th class="p-3 border-r border-forest-600 whitespace-nowrap">D열 : 번호</th>
+                <th class="p-3 border-r border-forest-600 whitespace-nowrap">E열 : 이름</th>
+                <th class="p-3 border-r border-forest-600 whitespace-nowrap bg-crimson-600">F열 : 객관식 점수</th>
+                <th class="p-3 text-left min-w-[260px]">G열 : 서술형 문항</th>
               </tr>
             </thead>
-            <tbody id="comparison-table-body" class="divide-y divide-beige-200 font-medium">
-              <!-- JS에서 동적 렌더링 -->
+            <tbody id="sheet-preview-tbody" class="divide-y divide-beige-200 bg-beige-50">
+              <!-- 제출 시 실시간 행 추가 -->
             </tbody>
           </table>
         </div>
       </div>
 
-    </section>
-
-    <!-- ========================================== -->
-    <!-- [TAB 2] 자율신경계 원리 & 자기주도 확인 퀴즈 -->
-    <!-- ========================================== -->
-    <section id="tab-content-concept" class="hidden space-y-5">
-
-      <!-- 핵심 원리 시각 카드 3개 -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div class="bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm space-y-2">
-          <span class="px-2.5 py-1 bg-forest-100 text-forest-700 text-xs font-black rounded-lg">원리 1 · 피로 신호 차단</span>
-          <h3 class="text-base font-black text-forest-800 pt-1">아데노신 수용체의 ‘위장 취업’</h3>
-          <p class="text-xs sm:text-sm text-beige-900 leading-relaxed">
-            뇌가 활동하면 피로 물질인 <b>아데노신</b>이 수용체에 결합해 부교감신경을 활성화(휴식 유도)합니다. 하지만 <b>카페인</b>은 아데노신과 입체 구조가 비슷해 수용체에 먼저 결합하여 피로 브레이크를 고장 냅니다.
-          </p>
-        </div>
-
-        <div class="bg-beige-50 p-5 rounded-2xl border-2 border-crimson-500/40 shadow-sm space-y-2">
-          <span class="px-2.5 py-1 bg-crimson-500 text-white text-xs font-black rounded-lg">원리 2 · 교감신경 흥분</span>
-          <h3 class="text-base font-black text-crimson-700 pt-1">동방결절과 노르에피네프린</h3>
-          <p class="text-xs sm:text-sm text-beige-900 leading-relaxed">
-            브레이크가 풀리면 연수(심장 박동 조절 중추)를 통해 <b>교감신경</b>이 흥분합니다. 교감신경 말단에서 분비된 <b>노르에피네프린</b>이 심장의 박동 원천인 <b>동방결절(SA node)</b>을 자극해 박동 주기를 짧게 만듭니다.
-          </p>
-        </div>
-
-        <div class="bg-beige-50 p-5 rounded-2xl border-2 border-beige-200 shadow-sm space-y-2">
-          <span class="px-2.5 py-1 bg-forest-600 text-beige-50 text-xs font-black rounded-lg">원리 3 · 효소와 길항 작용</span>
-          <h3 class="text-base font-black text-forest-800 pt-1">왜 사람마다 그래프가 다를까?</h3>
-          <p class="text-xs sm:text-sm text-beige-900 leading-relaxed">
-            간에서 카페인을 분해하는 효소(<b>CYP1A2</b>)가 풍부한 <b>둔감형</b>은 카페인을 빨리 해독하고 <b>부교감신경(아세틸콜린 분비)</b>이 심박수를 원래대로 낮춥니다. 반면 <b>민감형</b>은 고박동 상태가 수 시간 지속됩니다.
-          </p>
-        </div>
-      </div>
-
-      <!-- 학생 스스로 점검하는 인터랙티브 퀴즈 -->
-      <div class="bg-beige-50 p-6 rounded-2xl border-2 border-beige-200 shadow-sm space-y-4">
-        <div class="flex justify-between items-center border-b border-beige-200 pb-3">
-          <div>
-            <span class="text-xs font-extrabold text-crimson-600">SELF-CHECK QUIZ</span>
-            <h3 class="text-lg font-black text-forest-800">스스로 풀어보는 심박동 & 자율신경 개념 퀴즈</h3>
-          </div>
-          <span id="quiz-score-badge" class="px-3 py-1 bg-forest-600 text-beige-50 text-xs font-extrabold rounded-full">
-            정답을 선택해 보세요
-          </span>
-        </div>
-
-        <div class="space-y-4">
-          <!-- 문제 1 -->
-          <div class="bg-beige-100 p-4 rounded-xl border border-beige-200 space-y-2.5">
-            <p class="text-sm font-black text-forest-800">
-              Q1. 고카페인 음료를 마신 후 심장 박동이 빨라질 때, 심장의 ‘동방결절’에 직접 작용하여 박동을 촉진하는 신경전달물질은?
-            </p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button onclick="checkQuiz(1, 1, false)" class="quiz-btn-1 p-2.5 rounded-lg bg-beige-50 hover:bg-beige-200 border border-beige-300 text-xs font-bold text-left">① 아세틸콜린 (Acetylcholine)</button>
-              <button onclick="checkQuiz(1, 2, true)" class="quiz-btn-1 p-2.5 rounded-lg bg-beige-50 hover:bg-beige-200 border border-beige-300 text-xs font-bold text-left">② 노르에피네프린 (Norepinephrine)</button>
-              <button onclick="checkQuiz(1, 3, false)" class="quiz-btn-1 p-2.5 rounded-lg bg-beige-50 hover:bg-beige-200 border border-beige-300 text-xs font-bold text-left">③ 인슐린 (Insulin)</button>
-            </div>
-            <p id="quiz-feedback-1" class="hidden text-xs font-bold pt-1"></p>
-          </div>
-
-          <!-- 문제 2 -->
-          <div class="bg-beige-100 p-4 rounded-xl border border-beige-200 space-y-2.5">
-            <p class="text-sm font-black text-forest-800">
-              Q2. 시뮬레이션에서 ‘카페인 영향이 큰 사람(민감형)’이 말차 라떼(45mg)를 마셨을 때 45분 후 최고 심박수(84 BPM)는, ‘영향이 적은 사람(둔감형)’이 몬스터 에너지(110mg)를 마셨을 때 최고 심박수(76 BPM)보다 높습니다. 이를 통해 알 수 있는 사실은?
-            </p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button onclick="checkQuiz(2, 1, true)" class="quiz-btn-2 p-2.5 rounded-lg bg-beige-50 hover:bg-beige-200 border border-beige-300 text-xs font-bold text-left">① 음료의 카페인 절대량뿐만 아니라 개인의 대사 효소 및 자율신경 민감도가 심장 부담을 좌우한다.</button>
-              <button onclick="checkQuiz(2, 2, false)" class="quiz-btn-2 p-2.5 rounded-lg bg-beige-50 hover:bg-beige-200 border border-beige-300 text-xs font-bold text-left">② 커피가 아닌 녹차·말차 음료에는 카페인이 전혀 들어있지 않다.</button>
-            </div>
-            <p id="quiz-feedback-2" class="hidden text-xs font-bold pt-1"></p>
-          </div>
-
-          <!-- 문제 3 -->
-          <div class="bg-beige-100 p-4 rounded-xl border border-beige-200 space-y-2.5">
-            <p class="text-sm font-black text-forest-800">
-              Q3. 안정 시 심박수가 70 BPM(박동 주기 약 0.86초)인 학생이 대용량 아메리카노를 마셔 120 BPM이 되었다면, 심장 1회 박동 주기(수축+이완 시간)는 어떻게 변할까요?
-            </p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button onclick="checkQuiz(3, 1, false)" class="quiz-btn-3 p-2.5 rounded-lg bg-beige-50 hover:bg-beige-200 border border-beige-300 text-xs font-bold text-left">① 1.20초로 길어진다</button>
-              <button onclick="checkQuiz(3, 2, true)" class="quiz-btn-3 p-2.5 rounded-lg bg-beige-50 hover:bg-beige-200 border border-beige-300 text-xs font-bold text-left">② 0.50초로 짧아진다</button>
-              <button onclick="checkQuiz(3, 3, false)" class="quiz-btn-3 p-2.5 rounded-lg bg-beige-50 hover:bg-beige-200 border border-beige-300 text-xs font-bold text-left">③ 박동 주기는 변하지 않는다</button>
-            </div>
-            <p id="quiz-feedback-3" class="hidden text-xs font-bold pt-1"></p>
-          </div>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ========================================== -->
-    <!-- [TAB 3] 자기주도 탐구 보고서 (구글 사이트 제출용) -->
-    <!-- ========================================== -->
-    <section id="tab-content-report" class="hidden space-y-5">
-      <div class="bg-beige-50 p-6 rounded-2xl border-2 border-beige-200 shadow-sm space-y-5">
-        <div class="flex flex-wrap justify-between items-center gap-3 border-b border-beige-200 pb-4">
-          <div>
-            <span class="px-2.5 py-1 bg-crimson-500 text-white text-xs font-black rounded-full">구글 클래스룸 · 패들렛 · 설문지 연동</span>
-            <h3 class="text-xl font-black text-forest-800 mt-1">나만의 카페인 & 심박동 자기주도 탐구 보고서</h3>
-            <p class="text-xs text-beige-800 mt-0.5">아래 빈칸을 작성한 뒤 <b>[보고서 전체 복사하기]</b> 버튼을 눌러 구글 사이트 내 설문지나 과제함에 붙여넣으세요.</p>
-          </div>
-          <button onclick="copyStudentReport()" class="px-5 py-3 bg-forest-600 hover:bg-forest-700 text-beige-50 text-xs sm:text-sm font-black rounded-xl shadow transition flex items-center gap-2">
-            <span>📋</span> <span>보고서 전체 복사하기</span>
-          </button>
-        </div>
-
-        <!-- 학번/이름 및 나의 체질 선택 -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-xs font-extrabold text-forest-700 mb-1">학번 및 이름</label>
-            <input type="text" id="rep-student-info" placeholder="예: 20415 김생명" class="w-full p-2.5 rounded-xl bg-beige-100 border border-beige-300 text-sm font-bold focus:outline-none focus:border-forest-600">
-          </div>
-          <div>
-            <label class="block text-xs font-extrabold text-forest-700 mb-1">내가 자주 마시는 음료</label>
-            <input type="text" id="rep-fav-drink" placeholder="예: 아샷추, 백몬, 말차라떼 등" class="w-full p-2.5 rounded-xl bg-beige-100 border border-beige-300 text-sm font-bold focus:outline-none focus:border-forest-600">
-          </div>
-          <div>
-            <label class="block text-xs font-extrabold text-forest-700 mb-1">시뮬레이션으로 추정한 나의 체질</label>
-            <select id="rep-my-type" class="w-full p-2.5 rounded-xl bg-beige-100 border border-beige-300 text-sm font-bold focus:outline-none focus:border-forest-600">
-              <option value="일반인 (표준 대사)">🧑 일반인 (표준 대사)</option>
-              <option value="민감형 (카페인 영향 큰 편)">🔥 민감형 (카페인 영향 큰 편)</option>
-              <option value="둔감형 (카페인 영향 적은 편)">🛡️ 둔감형 (카페인 영향 적은 편)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- 탐구 질문 1 & 2 -->
-        <div class="space-y-4">
-          <div>
-            <label class="block text-xs sm:text-sm font-black text-forest-800 mb-1.5">
-              1. [데이터 해석] 시뮬레이터에서 음료 3종과 체질 3종을 조작해 본 결과, 가장 인상 깊었던 심박수(BPM) 변화와 그 이유를 자율신경계(교감·부교감신경) 원리로 서술해 보세요.
-            </label>
-            <textarea id="rep-q1" rows="3" placeholder="예: 대용량 아메리카노(280mg)를 민감형이 마시면 45분 만에 118 BPM까지 치솟고 박동 주기가 0.51초로 짧아진다. 교감신경 말단에서 노르에피네프린이 과다 분비되어 동방결절을 강하게 자극하기 때문이다." class="w-full p-3 rounded-xl bg-beige-100 border border-beige-300 text-xs sm:text-sm focus:outline-none focus:border-forest-600"></textarea>
-          </div>
-
-          <div>
-            <label class="block text-xs sm:text-sm font-black text-forest-800 mb-1.5">
-              2. [실생활 적용] 시험 기간 밤 8시에 고카페인 음료를 마시면 밤 12시(240분 경과) 수면에 어떤 영향을 미칠지 그래프를 근거로 설명하고, 나만의 건강한 카페인 섭취 규칙을 세워 보세요.
-            </label>
-            <textarea id="rep-q2" rows="3" placeholder="예: 섭취 후 4시간이 지나도 민감형은 95 BPM, 일반형도 79 BPM으로 부교감신경이 충분히 우위를 점하지 못해 깊은 수면에 들기 어렵다. 따라서 오후 3시 이후에는 카페인 음료를 피하고 하루 100mg 이하로만 섭취하겠다." class="w-full p-3 rounded-xl bg-beige-100 border border-beige-300 text-xs sm:text-sm focus:outline-none focus:border-forest-600"></textarea>
-          </div>
-        </div>
-      </div>
-    </section>
+    </div>
 
   </div>
 
-  <!-- ========================================================= -->
-  <!-- [MODAL] 구글 사이트(Google Sites) 수업 구축 및 임베드 가이드 -->
-  <!-- ========================================================= -->
-  <div id="gsites-modal" class="fixed inset-0 bg-forest-800/75 z-50 hidden items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-beige-50 border-4 border-forest-600 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+  <!-- ========================================================================= -->
+  <!-- [MODAL] '심박동 보고서 제출' 구글 스프레드시트 생성 및 연동 설정 모달 -->
+  <!-- ========================================================================= -->
+  <div id="sheet-modal" class="fixed inset-0 bg-forest-800/75 z-50 hidden items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-beige-50 border-4 border-forest-600 rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-start border-b border-beige-200 pb-3">
         <div>
-          <span class="px-2.5 py-0.5 bg-crimson-500 text-white text-xs font-black rounded-full">교사용 구글 사이트 구축 매뉴얼</span>
-          <h2 class="text-xl font-black text-forest-800 mt-1">구글 사이트(Google Sites)에 이 웹 앱을 완벽 구현하는 방법</h2>
+          <span class="px-2.5 py-0.5 bg-crimson-500 text-white text-xs font-black rounded-full">구글 스프레드시트 & 구글 사이트 완벽 연동</span>
+          <h2 class="text-xl font-black text-forest-800 mt-1">‘심박동 보고서 제출’ 스프레드시트 생성 및 웹 앱 연동 설정</h2>
         </div>
-        <button onclick="closeModal('gsites-modal')" class="px-3 py-1 bg-beige-200 hover:bg-crimson-500 hover:text-white rounded-lg text-sm font-black transition">✕ 닫기</button>
+        <button onclick="closeModal('sheet-modal')" class="px-3 py-1 bg-beige-200 hover:bg-crimson-500 hover:text-white rounded-lg text-sm font-black transition">✕ 닫기</button>
       </div>
 
-      <div class="space-y-3 text-xs sm:text-sm text-forest-800 leading-relaxed">
-        <div class="bg-beige-100 p-4 rounded-xl border border-beige-200">
-          <h4 class="font-black text-forest-700 text-sm mb-1">STEP 1. 구글 사이트에 시뮬레이터 삽입하기 (1분 완성)</h4>
-          <ol class="list-decimal list-inside space-y-1 text-beige-900">
-            <li><b>Google Sites(구글 사이트 도구)</b> 편집 화면 우측 메뉴에서 <b>[삽입] → [&lt;&gt; 퍼가기(Embed)]</b>를 클릭합니다.</li>
-            <li>상단 탭에서 URL 대신 <b>[코드 삽입(Embed code)]</b>을 선택합니다.</li>
-            <li>현재 이 파일의 전체 HTML 코드를 붙여넣고 <b>[다음] → [삽입]</b>을 누릅니다.</li>
-            <li>삽입된 박스의 가로 크기를 <b>페이지 전체 너비(12칸)</b>로 넓히고 세로 높이를 충분히 늘려주면 반응형으로 깔끔하게 배치됩니다.</li>
-          </ol>
+      <!-- 1. 웹 앱 URL 입력 박스 -->
+      <div class="bg-beige-100 p-4 rounded-xl border-2 border-forest-600/30 space-y-2.5">
+        <label class="block text-xs sm:text-sm font-black text-forest-800">
+          🔗 STEP 1. 배포한 Google Apps Script 웹 앱 URL 연결하기
+        </label>
+        <p class="text-xs text-beige-800">
+          아래 STEP 2의 스크립트를 배포한 뒤 생성된 <code>https://script.google.com/macros/s/.../exec</code> 주소를 입력하면 학생 제출 시 <b>‘심박동 보고서 제출’</b> 스프레드시트로 즉시 전송됩니다. (코드 상단 <code>GOOGLE_SCRIPT_WEB_APP_URL</code> 변수에 직접 넣어두셔도 됩니다.)
+        </p>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/배포ID/exec" class="flex-1 p-2.5 rounded-xl bg-beige-50 border-2 border-beige-300 text-xs sm:text-sm font-bold text-forest-800 focus:outline-none focus:border-forest-600">
+          <button onclick="saveGasWebAppUrl()" class="px-5 py-2.5 bg-forest-600 hover:bg-forest-700 text-beige-50 text-xs font-black rounded-xl transition whitespace-nowrap">
+            연동 URL 적용하기
+          </button>
         </div>
+      </div>
 
-        <div class="bg-beige-100 p-4 rounded-xl border border-beige-200">
-          <h4 class="font-black text-crimson-600 text-sm mb-1">STEP 2. 구글 사이트 추천 수업 페이지 레이아웃 구성안</h4>
-          <ul class="list-disc list-inside space-y-1 text-beige-900">
-            <li><b>상단 배너:</b> 구글 사이트 테마 색상을 본 웹앱과 동일한 <b>포레스트 그린(#1E4D3B) & 베이지(#F3EDE0)</b>로 지정하면 이질감 없이 하나의 사이트처럼 통합됩니다.</li>
-            <li><b>중단 영역:</b> 본 <b>[심박동 시뮬레이션 웹 앱]</b>을 전체 폭으로 배치합니다.</li>
-            <li><b>하단 영역:</b> 우측 메뉴의 <b>[삽입] → [설문지(Google Forms)]</b>를 추가하여, 학생들이 웹 앱의 <b>3단계 탭에서 복사한 탐구 보고서</b>를 바로 붙여넣어 제출하도록 연결합니다.</li>
-          </ul>
+      <!-- 2. Apps Script 코드 복사 영역 -->
+      <div class="bg-beige-100 p-4 rounded-xl border border-beige-200 space-y-2.5">
+        <div class="flex justify-between items-center">
+          <h4 class="font-black text-crimson-600 text-sm">
+            📜 STEP 2. ‘심박동 보고서 제출’ 스프레드시트 자동 생성 Apps Script 코드
+          </h4>
+          <button onclick="copyGasScriptCode()" class="px-3 py-1.5 bg-crimson-500 hover:bg-crimson-600 text-white text-xs font-black rounded-lg transition">
+            📋 Apps Script 코드 복사
+          </button>
         </div>
+        <ol class="list-decimal list-inside text-xs text-beige-900 space-y-1 leading-relaxed">
+          <li>구글 드라이브에서 <b>[새로 만들기] → [Google 스프레드시트]</b>를 만들고 제목을 <b><code>심박동 보고서 제출</code></b>로 지정합니다. (또는 상단 메뉴 <b>[확장 프로그램] → [Apps Script]</b>에서 <code>setupHeartbeatSpreadsheet()</code> 함수를 실행하면 시트와 A~G열 헤더가 자동 생성됩니다.)</li>
+          <li>상단 메뉴 <b>[확장 프로그램] → [Apps Script]</b>를 클릭하고 아래 코드를 붙여넣은 뒤 저장(💾)합니다.</li>
+          <li>우측 상단 <b>[배포] → [새 배포] → 유형: 웹 앱(Web App)</b> 선택 → 다음 사용자 인증 정보로 실행: <b>나(Me)</b> → 액세스 권한이 있는 사용자: <b>모든 사용자(Anyone)</b>로 배포한 후 웹 앱 URL을 복사합니다.</li>
+        </ol>
+        <pre id="gas-code-block" class="bg-forest-800 text-beige-50 p-3.5 rounded-xl text-[11px] overflow-x-auto leading-relaxed font-mono select-all">/**
+ * [고2 생명과학Ⅰ] '심박동 보고서 제출' 스프레드시트 자동 구성 및 웹 앱 연동 스크립트
+ * 열 구조: A열(제출시간) | B열(학년) | C열(반) | D열(번호) | E열(이름) | F열(객관식 점수) | G열(서술형 문항)
+ */
+const SPREADSHEET_TITLE = '심박동 보고서 제출';
+const SHEET_NAME = '심박동 보고서 제출';
+
+// 1. 최초 1회 실행 시 '심박동 보고서 제출' 시트 및 A~G열 헤더를 자동 생성하는 함수
+function setupHeartbeatSpreadsheet() {
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    ss = SpreadsheetApp.create(SPREADSHEET_TITLE);
+  } else {
+    ss.rename(SPREADSHEET_TITLE);
+  }
+  const sheet = getOrCreateReportSheet_(ss);
+  Logger.log('스프레드시트 준비 완료: ' + ss.getUrl());
+}
+
+// 2. 학생이 웹 앱 2번 페이지에서 [제출] 버튼을 눌렀을 때 실행되는 POST 엔드포인트
+function doPost(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = getOrCreateReportSheet_(ss);
+
+    const payload = JSON.parse(e.postData.contents);
+    const submitTime = payload.submitTime || Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
+
+    // A열 ~ G열 순서대로 행 추가
+    sheet.appendRow([
+      submitTime,          // A열 : 제출시간
+      payload.grade,       // B열 : 학년
+      payload.classNum,    // C열 : 반
+      payload.studentNum,  // D열 : 번호
+      payload.name,        // E열 : 이름
+      payload.mcScore,     // F열 : 객관식 점수 (5점 만점)
+      payload.essayText    // G열 : 서술형 문항
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({ result: 'success' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ result: 'error', message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// 시트 및 A열~G열 헤더 자동 생성 보조 함수
+function getOrCreateReportSheet_(ss) {
+  let sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
+  sheet.setName(SHEET_NAME);
+
+  if (sheet.getLastRow() === 0) {
+    const headers = ['제출시간', '학년', '반', '번호', '이름', '객관식 점수', '서술형 문항'];
+    sheet.appendRow(headers);
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setBackground('#1E4D3B').setFontColor('#FAF7F0').setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}</pre>
       </div>
 
       <div class="flex justify-end pt-2">
-        <button onclick="closeModal('gsites-modal')" class="px-5 py-2.5 bg-forest-600 text-beige-50 font-black text-xs rounded-xl hover:bg-forest-700 transition">
-          확인 완료
+        <button onclick="closeModal('sheet-modal')" class="px-5 py-2.5 bg-forest-600 text-beige-50 font-black text-xs rounded-xl hover:bg-forest-700 transition">
+          닫기
         </button>
       </div>
     </div>
   </div>
 
   <script>
+    /**
+     * [교사용 설정] 배포된 Google Apps Script 웹 앱 URL을 아래 변수에 입력하거나,
+     * 우측 상단 ['심박동 보고서 제출' 시트 연동 설정] 버튼에서 입력할 수 있습니다.
+     */
+    let GOOGLE_SCRIPT_WEB_APP_URL = "";
+
     // 시간 축 라벨 (7개 구간)
     const timePoints = [
       { min: 0,   label: '0분 (섭취 전)',   desc: '섭취 전 안정 상태입니다. 교감신경과 부교감신경이 균형을 이루어 70 BPM을 유지합니다.' },
@@ -703,9 +917,9 @@
       low: {
         name: '제주 말차 버블 라떼',
         mg: 45,
-        low_effect:  [70, 71, 72, 73, 71, 70, 70], // 카페인 영향 적은 사람 (둔감형)
-        normal:      [70, 72, 75, 77, 74, 72, 71], // 일반인
-        high_effect: [70, 75, 80, 84, 80, 77, 74]  // 카페인 영향 큰 사람 (민감형)
+        low_effect:  [70, 71, 72, 73, 71, 70, 70],
+        normal:      [70, 72, 75, 77, 74, 72, 71],
+        high_effect: [70, 75, 80, 84, 80, 77, 74]
       },
       mid: {
         name: '몬스터(백몬) / 아샷추',
@@ -729,17 +943,297 @@
       high_effect: '영향 큰 사람 (민감형)'
     };
 
-    // 현재 상태 변수
+    // 현재 시뮬레이션 및 페이지 상태 변수
+    let currentPage = 1;
     let currentDrink = 'mid';
     let currentPersona = 'normal';
     let currentTimeIdx = 3; // 기본 45분 피크 지점
     let bpmChart = null;
     let simTimer = null;
 
+    // 2번 페이지 보고서 제출 데이터 보관 배열 (A~G열 구조)
+    let submittedRows = [
+      {
+        submitTime: '2026-10-14 13:05:12 (예시)',
+        grade: '2학년',
+        classNum: '4반',
+        studentNum: '15번',
+        name: '김생명',
+        mcScore: 5,
+        essayText: '대용량 아메리카노(280mg) 섭취 시 민감형은 45분 후 118 BPM(박동 주기 0.51초)까지 상승한다. 이는 카페인이 아데노신 수용체를 차단해 교감신경 말단에서 노르에피네프린 분비가 촉진되어 동방결절을 자극하기 때문이다.'
+      }
+    ];
+
     // Web Audio API 심장 박동 사운드 변수
     let audioCtx = null;
     let soundEnabled = false;
     let soundTimeout = null;
+
+    // 1번 페이지(기존 웹 앱) <-> 2번 페이지(학생 보고서 활동) 전환 함수
+    function switchPage(pageNum) {
+      currentPage = pageNum;
+      const p1 = document.getElementById('page-1-container');
+      const p2 = document.getElementById('page-2-container');
+      const btn1 = document.getElementById('main-page-btn-1');
+      const btn2 = document.getElementById('main-page-btn-2');
+      const badge = document.getElementById('header-page-badge');
+
+      if (pageNum === 1) {
+        p1.classList.remove('hidden');
+        p2.classList.add('hidden');
+        btn1.className = 'flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-crimson-500 text-white shadow-md ring-2 ring-crimson-100/40';
+        btn2.className = 'flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-forest-700 text-beige-200 hover:bg-forest-600';
+        badge.innerText = 'PAGE 1 · 심박동 시뮬레이션 실험실';
+        if (bpmChart) bpmChart.resize();
+      } else {
+        p1.classList.add('hidden');
+        p2.classList.remove('hidden');
+        btn2.className = 'flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-crimson-500 text-white shadow-md ring-2 ring-crimson-100/40';
+        btn1.className = 'flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-forest-700 text-beige-200 hover:bg-forest-600';
+        badge.innerText = 'PAGE 2 · 학생 보고서 활동 & 제출';
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 1번 페이지 내 서브탭 전환 (실험실 vs 배경지식)
+    function switchSubTab(tabKey) {
+      ['sim', 'concept'].forEach(k => {
+        const content = document.getElementById('tab-content-' + k);
+        const btn = document.getElementById('tab-btn-' + k);
+        if (k === tabKey) {
+          content.classList.remove('hidden');
+          btn.className = 'flex-1 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-forest-600 text-beige-50 shadow';
+        } else {
+          content.classList.add('hidden');
+          btn.className = 'flex-1 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-beige-100 text-forest-700 hover:bg-beige-200';
+        }
+      });
+      if (tabKey === 'sim' && bpmChart) {
+        bpmChart.resize();
+      }
+    }
+
+    // 2번 페이지: 학년 체크박스(1~3학년) 선택 시 상호 배타 처리 및 반 드롭다운(1~11반 vs 1~12반) 동적 업데이트
+    function onGradeCheckboxChange(clickedCheckbox, gradeNum) {
+      const checkboxes = document.querySelectorAll('input[name="grade_chk"]');
+      checkboxes.forEach(cb => {
+        if (cb !== clickedCheckbox) cb.checked = false;
+      });
+      // 만약 클릭해서 체크를 해제하려 했다면 최소 1개는 유지되도록 재체크
+      if (!clickedCheckbox.checked) {
+        clickedCheckbox.checked = true;
+      }
+      populateClassDropdown(gradeNum);
+    }
+
+    // 학년에 맞춰 반 드롭다운 생성 (1, 2학년: 1~11반 / 3학년: 1~12반)
+    function populateClassDropdown(gradeNum) {
+      const classSelect = document.getElementById('student-class');
+      const hintSpan = document.getElementById('class-range-hint');
+      const prevValue = classSelect.value;
+
+      const maxClass = (gradeNum === 3) ? 12 : 11;
+      hintSpan.innerText = (gradeNum === 3) ? '(3학년: 1~12반)' : `(${gradeNum}학년: 1~11반)`;
+
+      let optionsHtml = '<option value="">반 선택</option>';
+      for (let c = 1; c <= maxClass; c++) {
+        optionsHtml += `<option value="${c}반">${c}반</option>`;
+      }
+      classSelect.innerHTML = optionsHtml;
+
+      // 기존 선택된 반이 범위 내에 있으면 유지
+      if (prevValue && parseInt(prevValue, 10) <= maxClass) {
+        classSelect.value = prevValue;
+      }
+    }
+
+    // 번호 드롭다운 생성 (1~30번)
+    function populateNumberDropdown() {
+      const numSelect = document.getElementById('student-number');
+      let optionsHtml = '<option value="">번호 선택</option>';
+      for (let n = 1; n <= 30; n++) {
+        optionsHtml += `<option value="${n}번">${n}번</option>`;
+      }
+      numSelect.innerHTML = optionsHtml;
+    }
+
+    // 논술형 글자 수 실시간 표시
+    function updateEssayCharCount() {
+      const text = document.getElementById('essay-report-text').value;
+      document.getElementById('essay-char-count').innerText = text.length;
+    }
+
+    // 1번 페이지 실험 수치를 논술형 작성창에 참고 문장으로 삽입
+    function insertSimSummaryToEssay() {
+      const drinkObj = caffeineDataset[currentDrink];
+      const peakBpm = drinkObj[currentPersona][3];
+      const cycleSec = (60 / peakBpm).toFixed(2);
+      const sampleSentence = `[실험 데이터 관찰] ${drinkObj.name}(카페인 ${drinkObj.mg}mg)를 '${personaNames[currentPersona]}'이 섭취했을 때 45분 후 최고 심박수는 ${peakBpm} BPM(박동 주기 ${cycleSec}초)까지 변화하였다.\n[자율신경계 원리 분석] `;
+
+      const textarea = document.getElementById('essay-report-text');
+      textarea.value = textarea.value ? (textarea.value + '\n' + sampleSentence) : sampleSentence;
+      textarea.focus();
+      updateEssayCharCount();
+      showToast('현재 1번 페이지의 실험 데이터가 논술형 작성창에 입력되었습니다.');
+    }
+
+    // 2번 페이지: 보고서 제출 처리 (A열~G열 생성 및 구글 스프레드시트 전송)
+    async function handleReportSubmit(event) {
+      event.preventDefault();
+
+      // 1. 학년 체크박스 확인
+      const checkedGradeEl = document.querySelector('input[name="grade_chk"]:checked');
+      if (!checkedGradeEl) {
+        showToast('학년(1~3학년 체크박스)을 선택해 주세요.');
+        return;
+      }
+      const grade = checkedGradeEl.value; // 예: "2학년"
+      const classNum = document.getElementById('student-class').value;
+      const studentNum = document.getElementById('student-number').value;
+      const name = document.getElementById('student-name').value.trim();
+
+      // 2. 객관식 문항 채점 (정답: 3번 -> 5점, 오답 -> 0점)
+      const selectedMc = document.querySelector('input[name="theory_mc"]:checked');
+      if (!selectedMc) {
+        showToast('2번 객관식 평가 문항(5점)의 답안을 선택해 주세요.');
+        return;
+      }
+      const mcScore = (selectedMc.value === '3') ? 5 : 0;
+
+      // 3. 서술형(논술형) 문항 확인
+      const essayText = document.getElementById('essay-report-text').value.trim();
+      if (essayText.length < 10) {
+        showToast('카페인과 심박동에 관한 탐구보고서(논술형)를 10자 이상 작성해 주세요.');
+        return;
+      }
+
+      // 4. 제출시간 생성 (YYYY-MM-DD HH:mm:ss)
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const submitTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+      // A열 ~ G열 구조 데이터 객체
+      const rowData = {
+        submitTime, // A열 : 제출시간
+        grade,      // B열 : 학년
+        classNum,   // C열 : 반
+        studentNum, // D열 : 번호
+        name,       // E열 : 이름
+        mcScore,    // F열 : 객관식 점수 (5점 또는 0점)
+        essayText   // G열 : 서술형 문항
+      };
+
+      const submitBtn = document.getElementById('submit-report-btn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⏳</span> <span>제출 중...</span>';
+
+      // 5. Google Apps Script 웹 앱 URL이 설정되어 있으면 실제 POST 전송
+      if (GOOGLE_SCRIPT_WEB_APP_URL) {
+        try {
+          await fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(rowData)
+          });
+          showToast(`✅ '심박동 보고서 제출' 스프레드시트에 성공적으로 전송되었습니다! (객관식 점수: ${mcScore}점/5점)`);
+        } catch (err) {
+          showToast(`⚠️ 네트워크 오류로 로컬 시트 테이블에 우선 저장되었습니다. (객관식 점수: ${mcScore}점/5점)`);
+        }
+      } else {
+        showToast(`✅ 제출 완료! 아래 '심박동 보고서 제출' 시트(A열~G열)에 기록되었습니다. (객관식 점수: ${mcScore}점/5점)`);
+      }
+
+      // 6. 화면 하단 스프레드시트 미리보기 테이블에 즉시 추가
+      submittedRows.unshift(rowData);
+      renderSheetPreviewTable();
+
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>🚀</span> <span>심박동 보고서 제출하기</span>';
+    }
+
+    // 하단 A열~G열 스프레드시트 미리보기 테이블 렌더링
+    function renderSheetPreviewTable() {
+      const tbody = document.getElementById('sheet-preview-tbody');
+      tbody.innerHTML = submittedRows.map(row => `
+        <tr class="hover:bg-beige-100/80 transition">
+          <td class="p-3 border-r border-beige-200 text-center font-mono text-xs text-beige-900 whitespace-nowrap">${escapeHtml(row.submitTime)}</td>
+          <td class="p-3 border-r border-beige-200 text-center font-bold text-forest-800 whitespace-nowrap">${escapeHtml(row.grade)}</td>
+          <td class="p-3 border-r border-beige-200 text-center font-bold text-forest-800 whitespace-nowrap">${escapeHtml(row.classNum)}</td>
+          <td class="p-3 border-r border-beige-200 text-center font-bold text-forest-800 whitespace-nowrap">${escapeHtml(row.studentNum)}</td>
+          <td class="p-3 border-r border-beige-200 text-center font-black text-forest-900 whitespace-nowrap">${escapeHtml(row.name)}</td>
+          <td class="p-3 border-r border-beige-200 text-center font-black whitespace-nowrap ${row.mcScore === 5 ? 'text-forest-600 bg-forest-50' : 'text-crimson-600 bg-crimson-50'}">${row.mcScore}점 / 5점</td>
+          <td class="p-3 text-xs text-forest-900 leading-relaxed whitespace-pre-wrap">${escapeHtml(row.essayText)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // '심박동 보고서 제출.csv' 파일로 다운로드 (A열~G열 구조 동일)
+    function downloadCsvBackup() {
+      const headers = ['제출시간', '학년', '반', '번호', '이름', '객관식 점수', '서술형 문항'];
+      const csvRows = [
+        headers.join(','),
+        ...submittedRows.map(r => [
+          `"${r.submitTime}"`,
+          `"${r.grade}"`,
+          `"${r.classNum}"`,
+          `"${r.studentNum}"`,
+          `"${r.name.replace(/"/g, '""')}"`,
+          `"${r.mcScore}"`,
+          `"${r.essayText.replace(/"/g, '""')}"`
+        ].join(','))
+      ];
+      const csvString = '\uFEFF' + csvRows.join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '심박동 보고서 제출.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('📄 [심박동 보고서 제출.csv] 파일이 다운로드되었습니다.');
+    }
+
+    // 모달에서 Google Apps Script 웹 앱 URL 적용
+    function saveGasWebAppUrl() {
+      const inputVal = document.getElementById('gas-url-input').value.trim();
+      if (!inputVal) {
+        showToast('배포된 Google Apps Script 웹 앱 URL을 입력해 주세요.');
+        return;
+      }
+      GOOGLE_SCRIPT_WEB_APP_URL = inputVal;
+      const pill = document.getElementById('sheet-connection-pill');
+      pill.className = 'px-3 py-0.5 bg-forest-600 text-beige-50 text-xs font-extrabold rounded-full';
+      pill.innerText = '🟢 "심박동 보고서 제출" 구글 스프레드시트 실시간 연동됨';
+      closeModal('sheet-modal');
+      showToast('구글 스프레드시트 웹 앱 URL이 성공적으로 연결되었습니다!');
+    }
+
+    // 모달 내 Apps Script 코드 복사
+    function copyGasScriptCode() {
+      const codeText = document.getElementById('gas-code-block').innerText;
+      const tempArea = document.createElement('textarea');
+      tempArea.value = codeText;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      try {
+        document.execCommand('copy');
+        showToast('Google Apps Script 코드가 복사되었습니다! 스프레드시트의 Apps Script 편집기에 붙여넣으세요.');
+      } catch (e) {
+        showToast('코드 영역을 직접 드래그하여 복사해 주세요.');
+      }
+      document.body.removeChild(tempArea);
+    }
 
     function initHeartbeatChart() {
       const ctx = document.getElementById('heartbeatChart').getContext('2d');
@@ -751,7 +1245,7 @@
             {
               label: '카페인 영향 큰 사람 (민감형)',
               data: [],
-              borderColor: '#D62828', // 빨간색 (Crimson Red)
+              borderColor: '#D62828',
               backgroundColor: 'rgba(214, 40, 40, 0.12)',
               tension: 0.38,
               fill: false
@@ -759,7 +1253,7 @@
             {
               label: '일반인 (표준 대사)',
               data: [],
-              borderColor: '#1E4D3B', // 녹색 (Forest Green)
+              borderColor: '#1E4D3B',
               backgroundColor: 'rgba(30, 77, 59, 0.12)',
               tension: 0.38,
               fill: false
@@ -767,7 +1261,7 @@
             {
               label: '카페인 영향 적은 사람 (둔감형)',
               data: [],
-              borderColor: '#8C6D46', // 다크 베이지/브라운
+              borderColor: '#8C6D46',
               backgroundColor: 'rgba(140, 109, 70, 0.1)',
               tension: 0.38,
               fill: false
@@ -819,7 +1313,6 @@
     function updateSimulator() {
       const drinkObj = caffeineDataset[currentDrink];
 
-      // 1. 음료 카드 선택 스타일 반영 (녹색 & 빨간색 테두리 강조)
       ['low', 'mid', 'high'].forEach(dKey => {
         const el = document.getElementById('drink-card-' + dKey);
         if (dKey === currentDrink) {
@@ -829,7 +1322,6 @@
         }
       });
 
-      // 2. 체질 카드 선택 스타일 반영
       ['low_effect', 'normal', 'high_effect'].forEach(pKey => {
         const el = document.getElementById('persona-card-' + pKey);
         if (pKey === currentPersona) {
@@ -839,11 +1331,9 @@
         }
       });
 
-      // 3. 상단 요약 배지 업데이트
       document.getElementById('selected-summary-pill').innerText =
         `${drinkObj.name} (${drinkObj.mg}mg) × ${personaNames[currentPersona]}`;
 
-      // 4. 그래프 데이터셋 및 현재 선택된 체질 굵게 강조
       const order = ['high_effect', 'normal', 'low_effect'];
       order.forEach((pKey, dsIdx) => {
         const ds = bpmChart.data.datasets[dsIdx];
@@ -861,7 +1351,6 @@
       });
       bpmChart.update();
 
-      // 5. 현재 선택된 시점의 BPM 및 심장 일러스트 박동 주기 업데이트
       const currentBpm = drinkObj[currentPersona][currentTimeIdx];
       const beatCycleSec = (60 / currentBpm).toFixed(2);
 
@@ -871,16 +1360,12 @@
       document.getElementById('live-beat-cycle').innerText = `${beatCycleSec} 초/회`;
       document.getElementById('cycle-text-inline').innerText = `${beatCycleSec}초`;
 
-      // 심장 SVG 및 동방결절 파동 애니메이션 속도 즉시 동기화
       const heartSvg = document.getElementById('animated-heart-svg');
       const saWave = document.getElementById('sa-wave-circle');
       heartSvg.style.animationDuration = `${beatCycleSec}s`;
       saWave.style.animationDuration = `${beatCycleSec}s`;
 
-      // 6. 자율신경계 상태 배지 및 해설 업데이트
       updateAutonomicReadout(currentBpm, drinkObj, beatCycleSec);
-
-      // 7. 하단 비교표 업데이트
       renderComparisonTable(drinkObj);
     }
 
@@ -915,7 +1400,7 @@
         sympLevel.innerText = '과다 폭주 ↑↑';
         paraLevel.innerText = '브레이크 상실 ↓↓';
         ventricle.setAttribute('fill', '#B81D1D');
-        bioExp.innerHTML = `🔴 <b>심장 과부하 · 빈맥 구간 (${bpm} BPM):</b> 과도한 카페인과 느린 분해 효소로 인해 교감신경이 폭주합니다! 1회 박동 주기가 <b>${beatCycleSec}초</b>로 매우 짧아져 가슴 두근거림(심계항진), 손떨림, 집중력 저하가 나타납니다.`;
+        bioExp.innerHTML = `🔴 <b>심장 과부하 · 빈맥 구간 (${bpm} BPM):</b> 과도한 카페인과 느린 분해 효소로 인해 교감신경이 폭주합니다! 1회 박동 주기가 <b>${beatCycleSec}초</b>로 매우 짧아져 가슴 두근거림(심계항진), 손떨림이 나타납니다.`;
       }
     }
 
@@ -957,7 +1442,6 @@
         const h = canvas.height;
 
         const currentBpm = caffeineDataset[currentDrink][currentPersona][currentTimeIdx];
-        // BPM이 높을수록 파형 주기가 좁아지고 이동 속도가 빨라짐
         const speed = (currentBpm / 70) * 2.4;
         const period = Math.max(55, Math.round(115 * (70 / currentBpm)));
 
@@ -965,14 +1449,12 @@
 
         ctx.clearRect(0, 0, w, h);
 
-        // 배경 모눈 격자 (녹색 의료 모니터 스타일)
         ctx.strokeStyle = 'rgba(203, 230, 214, 0.12)';
         ctx.lineWidth = 1;
         for (let x = 0; x < w; x += 16) {
           ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
         }
 
-        // 심전도 P-QRS-T 파형 그리기 (고박동 시 빨간색, 안정 시 밝은 베이지/연두색)
         ctx.strokeStyle = currentBpm >= 96 ? '#F9C6C6' : '#CBE6D6';
         ctx.lineWidth = 2.4;
         ctx.beginPath();
@@ -981,24 +1463,15 @@
           const pos = (x + ecgPhase) % period;
           let y = h * 0.62;
 
-          // P파 (심방 탈분극)
           if (pos > 10 && pos < 20) {
             y -= Math.sin(((pos - 10) / 10) * Math.PI) * 5;
-          }
-          // Q파
-          else if (pos >= 24 && pos < 27) {
+          } else if (pos >= 24 && pos < 27) {
             y += 4;
-          }
-          // R파 (심실 수축 피크!)
-          else if (pos >= 27 && pos < 32) {
+          } else if (pos >= 27 && pos < 32) {
             y -= 22;
-          }
-          // S파
-          else if (pos >= 32 && pos < 36) {
+          } else if (pos >= 32 && pos < 36) {
             y += 8;
-          }
-          // T파 (심실 재분극)
-          else if (pos >= 42 && pos < 54) {
+          } else if (pos >= 42 && pos < 54) {
             y -= Math.sin(((pos - 42) / 12) * Math.PI) * 7;
           }
 
@@ -1020,7 +1493,6 @@
         }
         const now = audioCtx.currentTime;
 
-        // 제1심음 (Lub - 방실판막 닫히는 저음)
         const osc1 = audioCtx.createOscillator();
         const gain1 = audioCtx.createGain();
         osc1.type = 'sine';
@@ -1033,7 +1505,6 @@
         osc1.start(now);
         osc1.stop(now + 0.1);
 
-        // 제2심음 (Dub - 반월판막 닫히는 소리)
         const osc2 = audioCtx.createOscillator();
         const gain2 = audioCtx.createGain();
         osc2.type = 'sine';
@@ -1049,9 +1520,7 @@
         const currentBpm = caffeineDataset[currentDrink][currentPersona][currentTimeIdx];
         const intervalMs = (60 / currentBpm) * 1000;
         soundTimeout = setTimeout(triggerLubDubSound, intervalMs);
-      } catch (e) {
-        // 오디오 컨텍스트 제한 시 무시
-      }
+      } catch (e) {}
     }
 
     function toggleHeartSound() {
@@ -1095,7 +1564,7 @@
         simTimer = null;
         document.getElementById('sim-play-btn').innerHTML = '<span>▶</span> <span>전체 시간 재생</span>';
       }
-      currentTimeIdx = 3; // 45분 피크
+      currentTimeIdx = 3;
       document.getElementById('time-slider').value = 3;
       updateSimulator();
     }
@@ -1127,95 +1596,25 @@
       }
     }
 
-    // 탭 전환 함수
-    function switchMainTab(tabKey) {
-      ['sim', 'concept', 'report'].forEach(k => {
-        const content = document.getElementById('tab-content-' + k);
-        const btn = document.getElementById('tab-btn-' + k);
-        if (k === tabKey) {
-          content.classList.remove('hidden');
-          btn.className = 'flex-1 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-forest-600 text-beige-50 shadow';
-        } else {
-          content.classList.add('hidden');
-          btn.className = 'flex-1 py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-beige-100 text-forest-700 hover:bg-beige-200';
-        }
-      });
-      if (tabKey === 'sim' && bpmChart) {
-        bpmChart.resize();
-      }
-    }
-
-    // 퀴즈 채점 함수
-    function checkQuiz(qNum, choiceIdx, isCorrect) {
-      const feedback = document.getElementById('quiz-feedback-' + qNum);
-      feedback.classList.remove('hidden');
-
-      const explanations = {
-        1: '정답입니다! 교감신경 말단에서는 노르에피네프린이 분비되어 동방결절의 박동을 촉진하고, 부교감신경 말단에서는 아세틸콜린이 분비되어 박동을 억제합니다.',
-        2: '정답입니다! 같은 양의 카페인이라도 간 대사 효소(CYP1A2) 활성도와 자율신경 반응성에 따라 심장이 받는 부담이 역전될 수 있습니다.',
-        3: '정답입니다! 심박동 주기 = 60초 ÷ 120회 = 0.50초입니다. 심박수가 빨라질수록 심장이 수축하고 이완할 수 있는 주기가 짧아집니다.'
-      };
-
-      if (isCorrect) {
-        feedback.className = 'text-xs font-extrabold pt-1 text-forest-600';
-        feedback.innerText = '⭕ ' + explanations[qNum];
-      } else {
-        feedback.className = 'text-xs font-extrabold pt-1 text-crimson-600';
-        feedback.innerText = '❌ 다시 생각해 보세요! 교감신경과 동방결절의 작용 원리를 확인해 볼까요?';
-      }
-    }
-
-    // 학생 탐구 보고서 클립보드 복사 (Google Sites iframe 호환 execCommand 사용)
-    function copyStudentReport() {
-      const info = document.getElementById('rep-student-info').value || '(미입력)';
-      const favDrink = document.getElementById('rep-fav-drink').value || '(미입력)';
-      const myType = document.getElementById('rep-my-type').value;
-      const q1 = document.getElementById('rep-q1').value || '(미작성)';
-      const q2 = document.getElementById('rep-q2').value || '(미작성)';
-
-      const reportText =
-`[고2 생명과학Ⅰ 심박동 시뮬레이션 자기주도 탐구 보고서]
-■ 학번/이름: ${info}
-■ 자주 마시는 음료: ${favDrink}
-■ 나의 추정 체질: ${myType}
-
-1. [데이터 해석 및 자율신경계 원리]
-${q1}
-
-2. [실생활 적용 및 건강한 카페인 섭취 프로토콜]
-${q2}`;
-
-      const tempArea = document.createElement('textarea');
-      tempArea.value = reportText;
-      document.body.appendChild(tempArea);
-      tempArea.select();
-      try {
-        document.execCommand('copy');
-        showToast('탐구 보고서가 클립보드에 복사되었습니다! 구글 설문지나 과제함에 붙여넣기(Ctrl+V) 하세요.');
-      } catch (err) {
-        showToast('복사에 실패했습니다. 텍스트를 직접 드래그하여 복사해 주세요.');
-      }
-      document.body.removeChild(tempArea);
-    }
-
-    // 모달 및 토스트 헬퍼 함수
     function openModal(id) {
       const m = document.getElementById(id);
       m.classList.remove('hidden');
       m.classList.add('flex');
     }
+
     function closeModal(id) {
       const m = document.getElementById(id);
       m.classList.add('hidden');
       m.classList.remove('flex');
     }
+
     function showToast(message) {
       const box = document.getElementById('toast-box');
       document.getElementById('toast-msg').innerText = message;
       box.classList.remove('hidden');
       setTimeout(() => {
         box.classList.add('hidden');
-      }, 3400);
+      }, 3600);
     }
 
     // 초기 실행
@@ -1223,6 +1622,10 @@ ${q2}`;
       initHeartbeatChart();
       updateSimulator();
       startEcgCanvasLoop();
+      // 2번 페이지 기본 학년(2학년)에 맞춰 반(1~11반) 및 번호(1~30번) 드롭다운 초기화
+      populateClassDropdown(2);
+      populateNumberDropdown();
+      renderSheetPreviewTable();
     };
   </script>
 </body>
